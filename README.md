@@ -27,7 +27,7 @@ Prévia funcional e responsiva do novo ecossistema digital do CENTEP, construíd
   - Dinâmicos.
 - Seções CENTEP LAB, Hall da Excelência, parceiros e matrículas.
 - Tela de login com escolha de perfil.
-- Portal do Aluno com progresso, agenda, atividade e financeiro.
+- Portal do Aluno navegável com painel, cursos, boletim, frequência, agenda, financeiro, biblioteca, certificados, carteirinha digital e mensagens.
 - Portal do Professor com turmas, agenda, pendências e desempenho.
 - Dashboard Administrativo com indicadores, matrículas e atalhos.
 - Navegação adaptada para computador, tablet e celular.
