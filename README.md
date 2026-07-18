@@ -1,118 +1,69 @@
-# CENTEP Educacional 360
+# CENTEP Educacional 360 — Versão 10
 
-## Publicar no GitHub Pages
+Versão navegável e responsiva do ecossistema digital do CENTEP, com identidade visual profissional, imagens específicas dos cursos e acesso demonstrativo separado por perfil.
 
-O projeto inclui o fluxo `.github/workflows/pages.yml`. Depois de enviar o
-codigo para um repositorio GitHub na branch `main`, abra **Settings > Pages** e
-confirme **GitHub Actions** como fonte. A publicacao sera refeita
-automaticamente a cada novo envio para a branch `main`.
+## Áreas disponíveis
 
-Endereco padrao:
+### Site institucional
 
-```text
-https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/
-```
+- Home Premium
+- Cursos oficiais
+- CENTEP LAB
+- Apresentação institucional
+- Fluxo de acesso aos portais
 
-Prévia funcional e responsiva do novo ecossistema digital do CENTEP, construída com Next.js, TypeScript, React e Tailwind CSS.
+### Portal do Aluno
 
-## O que está incluído
+- Visão geral
+- Meus cursos
+- Boletim
+- Frequência
+- Agenda
+- Financeiro
+- Biblioteca
+- Certificados
+- Carteirinha digital
+- Mensagens
 
-- Home institucional premium e responsiva, com imagem principal em alta definição e proporção 16:9.
-- Logo oficial do CENTEP aplicada ao site e aos portais.
-- Imagens exclusivas relacionadas ao conteúdo de cada curso.
-- Apresentação dos quatro cursos oficiais:
-  - Técnico e Operador de Som.
-  - Alinhamento de Sistemas Sonoros.
-  - Mixagem na Prática.
-  - Dinâmicos.
-- Seções CENTEP LAB, Hall da Excelência, parceiros e matrículas.
-- Tela de login com escolha de perfil.
-- Portal do Aluno navegável com painel, cursos, boletim, frequência, agenda, financeiro, biblioteca, certificados, carteirinha digital e mensagens.
-- Portal do Professor navegável com turmas, diário de classe, chamada, notas, materiais didáticos, planejamento, agenda e comunicados.
-- Dashboard Administrativo com indicadores, matrículas e atalhos.
-- Navegação adaptada para computador, tablet e celular.
+### Portal do Professor
 
-## Requisitos
+- Visão geral
+- Minhas turmas
+- Diário de classe
+- Chamada e frequência
+- Lançamento de notas
+- Materiais didáticos
+- Planejamento
+- Agenda
+- Comunicados
 
-- Node.js 22 ou superior.
-- pnpm 10 ou superior (recomendado).
+### Painel Administrativo
 
-Se você já possui Node.js, pode habilitar o pnpm com:
+- Dashboard executivo
+- Gestão de alunos e professores
+- Cursos e turmas
+- Fluxo de matrículas
+- Gestão financeira
+- Parceiros
+- Notícias, eventos e galeria
+- Certificados
+- Relatórios e indicadores
+- Configurações institucionais
 
-```bash
-corepack enable
-```
+## Visualizar no computador
 
-## Como executar no computador
+Como as imagens são carregadas por arquivos auxiliares, abra a pasta usando um servidor local:
 
-1. Extraia o ZIP.
-2. Abra um terminal dentro da pasta extraída.
-3. Instale as dependências:
+1. Abra o PowerShell dentro desta pasta.
+2. Execute `python -m http.server 8080`.
+3. Acesse `http://localhost:8080` no navegador.
 
-```bash
-pnpm install
-```
+Se o Python não estiver instalado, publique todos os arquivos desta pasta juntos em uma hospedagem estática, como o GitHub Pages.
 
-4. Inicie o projeto:
+## Acessos demonstrativos
 
-```bash
-pnpm dev
-```
+- Aluno: `aluno@centep.com.br` / `Aluno@2026`
+- Professor: `professor@centep.com.br` / `Professor@2026`
+- Administração: `admin@centep.com.br` / `Centep@2026`
 
-5. Abra no navegador o endereço mostrado no terminal (normalmente `http://localhost:3000`).
-
-## Acessos de demonstração
-
-| Perfil | E-mail | Senha |
-| --- | --- | --- |
-| Aluno | `aluno@centep.com.br` | `Aluno@2026` |
-| Professor | `professor@centep.com.br` | `Professor@2026` |
-| Administração | `admin@centep.com.br` | `Centep@2026` |
-
-O login desta prévia é demonstrativo e salva a sessão apenas no navegador (`localStorage`). Ele não deve ser usado em produção sem um backend seguro.
-
-## Gerar a versão de produção
-
-```bash
-pnpm build
-pnpm start
-```
-
-## Rotas principais
-
-- `/` — site institucional.
-- `/login` — seleção de perfil e acesso demonstrativo.
-- `/portal-aluno` — CENTEP Connect.
-- `/portal-professor` — área do professor.
-- `/admin` — painel administrativo.
-
-## Publicação
-
-Este projeto pode ser hospedado em uma plataforma compatível com Next.js/Vite ou em infraestrutura própria. Antes de publicar como sistema real, ainda será necessário conectar:
-
-- backend e banco de dados;
-- autenticação segura;
-- cadastro e gestão reais de alunos, professores e turmas;
-- upload de arquivos;
-- financeiro e meios de pagamento;
-- dados oficiais de contato, endereço, indicadores e parceiros;
-- fotografias oficiais e autorizadas do CENTEP, quando disponíveis, para substituir materiais demonstrativos.
-
-## Estrutura principal
-
-```text
-app/
-├── admin/              # Dashboard administrativo
-├── components/         # Componentes compartilhados
-├── lib/                # Autenticação demonstrativa
-├── login/              # Tela de acesso
-├── portal-aluno/       # Dashboard do aluno
-├── portal-professor/   # Dashboard do professor
-├── globals.css         # Design system e responsividade
-├── layout.tsx          # Metadados e fontes
-└── page.tsx            # Home institucional
-```
-
-## Observação sobre o pacote anterior
-
-O arquivo `centep-preview-v1.zip` citado no histórico não estava disponível no ambiente desta entrega. Esta versão foi reconstruída e evoluída a partir do escopo, dos conteúdos e da identidade visual definidos e aprovados na conversa.
+> Esta versão é uma demonstração visual. O login e os dados utilizam o armazenamento local do navegador. Para uso real, autenticação, banco de dados, pagamentos e gravações precisam ser conectados a um backend seguro.
