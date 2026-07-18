@@ -17,7 +17,9 @@ Prévia funcional e responsiva do novo ecossistema digital do CENTEP, construíd
 
 ## O que está incluído
 
-- Home institucional premium e responsiva.
+- Home institucional premium e responsiva, com imagem principal em alta definição e proporção 16:9.
+- Logo oficial do CENTEP aplicada ao site e aos portais.
+- Imagens exclusivas relacionadas ao conteúdo de cada curso.
 - Apresentação dos quatro cursos oficiais:
   - Técnico e Operador de Som.
   - Alinhamento de Sistemas Sonoros.
@@ -94,7 +96,7 @@ Este projeto pode ser hospedado em uma plataforma compatível com Next.js/Vite o
 - upload de arquivos;
 - financeiro e meios de pagamento;
 - dados oficiais de contato, endereço, indicadores e parceiros;
-- logotipo oficial e fotografias autorizadas do CENTEP.
+- fotografias oficiais e autorizadas do CENTEP, quando disponíveis, para substituir materiais demonstrativos.
 
 ## Estrutura principal
 
