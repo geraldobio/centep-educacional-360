@@ -74,14 +74,20 @@
         return '<section class="dash-grid"><article class="panel"><h3>Matrículas por mês</h3><div class="bars"><div class="bar" style="height:42%"><span>Fev</span></div><div class="bar" style="height:58%"><span>Mar</span></div><div class="bar" style="height:49%"><span>Abr</span></div><div class="bar" style="height:76%"><span>Mai</span></div><div class="bar" style="height:68%"><span>Jun</span></div><div class="bar" style="height:91%"><span>Jul</span></div></div></article><article class="panel"><h3>Atividade recente</h3><div class="timeline"><div class="event"><time>+8</time><div><b>Novas matrículas</b><span>Últimas 24 horas</span></div></div><div class="event"><time>12</time><div><b>Certificados emitidos</b><span>Nesta semana</span></div></div><div class="event"><time>03</time><div><b>Turmas próximas</b><span>Início em agosto</span></div></div></div></article></section>'
       }
       window.logout=function(){localStorage.removeItem("centepSession");go("home")}
-      function loadImageAsset(file,callback){
-        fetch(file).then(function(response){
-          if(!response.ok)throw new Error("asset");
-          return response.text();
-        }).then(function(base64){callback('url("data:image/jpeg;base64,'+base64.trim()+'")')}).catch(function(){});
+      function loadImageAsset(file,parts,callback){
+        var requests=[];
+        for(var index=1;index<=parts;index++){
+          requests.push(fetch(file+".part"+index).then(function(response){
+            if(!response.ok)throw new Error("asset");
+            return response.text();
+          }));
+        }
+        Promise.all(requests).then(function(chunks){
+          callback('url("data:image/jpeg;base64,'+chunks.join("").trim()+'")');
+        }).catch(function(){});
       }
       function loadVisuals(){
-        loadImageAsset("hero-audio-v3-web.b64",function(image){
+        loadImageAsset("hero-audio-v3-web.b64",6,function(image){
           var hero=document.querySelector(".hero");
           if(hero){
             hero.style.backgroundImage="radial-gradient(circle at 80% 22%,rgba(20,128,220,.16),transparent 26%),"+image;
@@ -89,11 +95,11 @@
             hero.style.backgroundPosition="center center";
           }
         });
-        var courseImages=["course-tecnico-operador.b64","course-alinhamento.b64","course-mixagem.b64","course-dinamicos.b64"];
+        var courseImages=[["course-tecnico-operador.b64",4],["course-alinhamento.b64",4],["course-mixagem.b64",4],["course-dinamicos.b64",4]];
         document.querySelectorAll(".course-art").forEach(function(card,index){
-          var file=courseImages[index];
-          if(!file)return;
-          loadImageAsset(file,function(image){
+          var asset=courseImages[index];
+          if(!asset)return;
+          loadImageAsset(asset[0],asset[1],function(image){
             card.style.backgroundImage="linear-gradient(0deg,rgba(3,12,23,.58),rgba(3,12,23,.04) 68%),"+image;
             card.style.backgroundSize="cover";
             card.style.backgroundPosition="center";
