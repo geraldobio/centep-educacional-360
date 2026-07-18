@@ -11,6 +11,7 @@ const USER_EMAIL_HEADER = "oai-authenticated-user-email";
 const USER_FULL_NAME_HEADER = "oai-authenticated-user-full-name";
 const USER_FULL_NAME_ENCODING_HEADER = "oai-authenticated-user-full-name-encoding";
 const PERCENT_ENCODED_UTF8 = "percent-encoded-utf-8";
+const CENTEP_ADMIN_EMAILS = new Set(["geraldo.bio@gmail.com"]);
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
@@ -35,6 +36,10 @@ export async function requireChatGPTUser(returnTo: string): Promise<ChatGPTUser>
 
 export function chatGPTSignOutPath(returnTo = "/"): string {
   return `/signout-with-chatgpt?return_to=${encodeURIComponent(safeRelativeReturnPath(returnTo))}`;
+}
+
+export function isCentepAdminEmail(email: string): boolean {
+  return CENTEP_ADMIN_EMAILS.has(email.trim().toLowerCase());
 }
 
 function safeRelativeReturnPath(value: string): string {

@@ -13,6 +13,10 @@ Tailwind CSS, Vinext e Cloudflare D1.
   - Dinâmicos.
 - Tela pública de matrícula online conectada ao banco de dados.
 - Painel protegido para consultar matrículas recebidas.
+- Busca por candidato, telefone, cidade, curso ou protocolo.
+- Filtros por curso e status de atendimento.
+- Atualização segura do status da matrícula.
+- Contato rápido pelo WhatsApp e exportação CSV compatível com Excel.
 - Login demonstrativo com fluxo por perfil.
 - Portal do Aluno, Portal do Professor e Dashboard Administrativo.
 - Seções CENTEP LAB, Hall da Excelência e parceiros.
@@ -41,6 +45,7 @@ Arquivos relacionados:
 
 ```text
 app/api/enrollments/route.ts  # API pública de matrícula
+app/api/admin/                # atualização protegida de status
 app/matricula/page.tsx        # formulário de matrícula
 app/admin-online/page.tsx     # painel protegido
 db/schema.ts                  # estrutura do banco
@@ -88,8 +93,8 @@ pnpm dev
 | Professor | `professor@centep.com.br` | `Professor@2026` |
 | Administração | `admin@centep.com.br` | `Centep@2026` |
 
-Essas credenciais servem somente para demonstrar os portais. A sessão dos
-portais demonstrativos ainda é mantida no navegador. O painel de matrículas
+O login é demonstrativo e essas credenciais servem somente para apresentar os
+portais. A sessão acadêmica ainda é mantida no navegador. O painel de matrículas
 online usa autenticação protegida no servidor.
 
 ## Migrações e validação
