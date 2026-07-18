@@ -1,4 +1,4 @@
-# CENTEP Educacional 360 — Versão 10
+# CENTEP Educacional 360 — Versão 11
 
 Versão navegável e responsiva do ecossistema digital do CENTEP, com identidade visual profissional, imagens específicas dos cursos e acesso demonstrativo separado por perfil.
 
@@ -11,6 +11,7 @@ Versão navegável e responsiva do ecossistema digital do CENTEP, com identidade
 - CENTEP LAB
 - Apresentação institucional
 - Fluxo de acesso aos portais
+- Matrícula Online com validação, protocolo e seleção de curso
 
 ### Portal do Aluno
 
@@ -49,6 +50,7 @@ Versão navegável e responsiva do ecossistema digital do CENTEP, com identidade
 - Certificados
 - Relatórios e indicadores
 - Configurações institucionais
+- Recebimento demonstrativo das solicitações de matrícula feitas no mesmo navegador
 
 ## Visualizar no computador
 
@@ -66,4 +68,4 @@ Se o Python não estiver instalado, publique todos os arquivos desta pasta junto
 - Professor: `professor@centep.com.br` / `Professor@2026`
 - Administração: `admin@centep.com.br` / `Centep@2026`
 
-> Esta versão é uma demonstração visual. O login e os dados utilizam o armazenamento local do navegador. Para uso real, autenticação, banco de dados, pagamentos e gravações precisam ser conectados a um backend seguro.
+> Esta versão é uma demonstração funcional. O login e as solicitações de matrícula utilizam o armazenamento local do navegador. Por isso, a matrícula aparece no Admin apenas quando os dois acessos são feitos no mesmo navegador e dispositivo. Para uso real e compartilhado pela equipe, autenticação, banco de dados, pagamentos e gravações precisam ser conectados a um backend seguro.
