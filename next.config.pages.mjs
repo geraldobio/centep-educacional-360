@@ -1,9 +1,8 @@
-import type { NextConfig } from "next";
-
 const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1];
 const basePath = repositoryName ? `/${repositoryName}` : "";
 
-const nextConfig: NextConfig = {
+/** @type {import("next").NextConfig} */
+const nextConfig = {
   output: "export",
   basePath,
   assetPrefix: basePath || undefined,

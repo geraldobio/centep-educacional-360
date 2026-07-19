@@ -34,7 +34,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Preparar configuracao do GitHub Pages
-        run: cp next.config.pages.ts next.config.ts
+        run: cp next.config.pages.mjs next.config.mjs
 
       - name: Gerar site estatico
         run: pnpm exec next build
