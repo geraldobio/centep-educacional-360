@@ -122,6 +122,17 @@ pnpm build
 Esta versão com banco online deve ser publicada pelo Cloudflare/Sites, que cria
 e conecta automaticamente o D1 definido em `.openai/hosting.json`.
 
+Para implantação direta pelo Cloudflare Workers Builds, use:
+
+- comando de build: `CLOUDFLARE_DIRECT_DEPLOY=1 pnpm run build`
+- comando de implantação: `pnpm run deploy:cloudflare`
+
+Defina `CLOUDFLARE_D1_DATABASE_ID` e, opcionalmente,
+`CLOUDFLARE_D1_DATABASE_NAME` nas variáveis de build. Quando o identificador do
+banco está presente, a implantação conecta o binding `DB` e aplica as migrações
+automaticamente. O acesso administrativo também reconhece o cabeçalho de
+identidade do Cloudflare Access.
+
 O projeto está configurado para preservar as migrações em `drizzle/` e aplicá-las
 durante a implantação. O site antigo no GitHub Pages pode permanecer como
 reserva, mas o GitHub Pages sozinho não executa banco de dados nem API de
