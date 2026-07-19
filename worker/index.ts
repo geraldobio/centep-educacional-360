@@ -42,4 +42,8 @@ const worker = {
       }, allowedWidths);
     }
 
-    return handler.fetch(request, env, 
+    return handler.fetch(request, env, ctx);
+  },
+};
+
+export default worker;
