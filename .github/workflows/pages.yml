@@ -33,10 +33,11 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Preparar configuracao do GitHub Pages
+        run: cp next.config.pages.ts next.config.ts
+
       - name: Gerar site estatico
         run: pnpm exec next build
-        env:
-          STATIC_EXPORT: "1"
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
