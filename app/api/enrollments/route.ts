@@ -1,5 +1,5 @@
 import { getDb } from "../../../db";
-import { enrollments } from "../../../db/schema";
+import { enrollmentHistory, enrollments } from "../../../db/schema";
 
 type EnrollmentPayload = {
   name?: string;
@@ -64,7 +64,17 @@ export async function POST(request: Request) {
 
     const protocol = `CENTEP-${new Date().getUTCFullYear()}-${crypto.randomUUID().split("-")[0].toUpperCase()}`;
     const db = getDb();
-    await db.insert(enrollments).values({ protocol, ...data });
+    const [created] = await db
+      .insert(enrollments)
+      .values({ protocol, ...data })
+      .returning({ id: enrollments.id });
+
+    await db.insert(enrollmentHistory).values({
+      enrollmentId: created.id,
+      action: "solicitacao",
+      description: "Solicitação de matrícula recebida pelo site.",
+      authorEmail: "site-publico",
+    });
 
     return Response.json({ ok: true, protocol }, { status: 201 });
   } catch (error) {

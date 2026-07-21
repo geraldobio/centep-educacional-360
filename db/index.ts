@@ -1,9 +1,11 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./schema";
 
-let database: D1Database | undefined;
+export type D1Binding = Parameters<typeof drizzle>[0];
 
-export function setD1Database(binding: D1Database | undefined) {
+let database: D1Binding | undefined;
+
+export function setD1Database(binding: D1Binding | undefined) {
   database = binding;
 }
 
