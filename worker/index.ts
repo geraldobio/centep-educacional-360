@@ -1,11 +1,13 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
-import { setD1Database } from "../db";
+import { setD1Database, type D1Binding } from "../db";
 
 interface Env {
-  ASSETS: Fetcher;
-  DB: D1Database;
+  ASSETS: {
+    fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+  };
+  DB: D1Binding;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {

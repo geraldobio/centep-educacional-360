@@ -1,7 +1,12 @@
-import { eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { getDb } from "../../../../../db";
-import { enrollments } from "../../../../../db/schema";
-import { getChatGPTUser, isCentepAdminEmail } from "../../../../chatgpt-auth";
+import {
+  enrollmentDocuments,
+  enrollmentHistory,
+  enrollmentNotes,
+  enrollments,
+} from "../../../../../db/schema";
+import { authorizeAdminRequest, parseEnrollmentId } from "../../admin-request";
 
 const enrollmentStatuses = new Set([
   "Nova",
@@ -15,24 +20,70 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+export async function GET(request: Request, context: RouteContext) {
+  const authorization = await authorizeAdminRequest(request);
+  if ("response" in authorization) return authorization.response;
+
+  const id = await parseEnrollmentId(context.params);
+  if (!id) {
+    return Response.json({ error: "Matrícula inválida." }, { status: 400 });
+  }
+
+  const db = getDb();
+  const [enrollment] = await db
+    .select()
+    .from(enrollments)
+    .where(eq(enrollments.id, id))
+    .limit(1);
+
+  if (!enrollment) {
+    return Response.json({ error: "Matrícula não encontrada." }, { status: 404 });
+  }
+
+  const [notes, documents, history] = await Promise.all([
+    db
+      .select()
+      .from(enrollmentNotes)
+      .where(eq(enrollmentNotes.enrollmentId, id))
+      .orderBy(desc(enrollmentNotes.createdAt), desc(enrollmentNotes.id)),
+    db
+      .select()
+      .from(enrollmentDocuments)
+      .where(eq(enrollmentDocuments.enrollmentId, id))
+      .orderBy(asc(enrollmentDocuments.label)),
+    db
+      .select()
+      .from(enrollmentHistory)
+      .where(eq(enrollmentHistory.enrollmentId, id))
+      .orderBy(desc(enrollmentHistory.createdAt), desc(enrollmentHistory.id)),
+  ]);
+
+  return Response.json({
+    enrollment,
+    notes,
+    documents,
+    history: history.some((item) => item.action === "solicitacao")
+      ? history
+      : [
+          ...history,
+          {
+            id: 0,
+            enrollmentId: enrollment.id,
+            action: "solicitacao",
+            description: "Solicitação de matrícula recebida pelo site.",
+            authorEmail: "site-publico",
+            createdAt: enrollment.createdAt,
+          },
+        ],
+  });
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
-  const user = await getChatGPTUser();
-  if (!user) {
-    return Response.json({ error: "Faça login para continuar." }, { status: 401 });
-  }
-  if (!isCentepAdminEmail(user.email)) {
-    return Response.json({ error: "Acesso não autorizado." }, { status: 403 });
-  }
+  const authorization = await authorizeAdminRequest(request);
+  if ("response" in authorization) return authorization.response;
 
-  const requestOrigin = request.headers.get("origin");
-  const requestHost = request.headers.get("host");
-  if (requestOrigin && requestHost && new URL(requestOrigin).host !== requestHost) {
-    return Response.json({ error: "Origem da solicitação não permitida." }, { status: 403 });
-  }
-
-  const { id: rawId } = await context.params;
-  const id = Number.parseInt(rawId, 10);
-  if (!Number.isSafeInteger(id) || id < 1) {
+  const id = await parseEnrollmentId(context.params);
+  if (!id) {
     return Response.json({ error: "Matrícula inválida." }, { status: 400 });
   }
 
@@ -49,15 +100,31 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const db = getDb();
-  const updated = await db
-    .update(enrollments)
-    .set({ status })
+  const [current] = await db
+    .select({ id: enrollments.id, status: enrollments.status })
+    .from(enrollments)
     .where(eq(enrollments.id, id))
-    .returning({ id: enrollments.id, status: enrollments.status });
+    .limit(1);
 
-  if (!updated.length) {
+  if (!current) {
     return Response.json({ error: "Matrícula não encontrada." }, { status: 404 });
   }
 
-  return Response.json({ ok: true, enrollment: updated[0] });
+  if (current.status !== status) {
+    await db.update(enrollments).set({ status }).where(eq(enrollments.id, id));
+    await db.insert(enrollmentHistory).values({
+      enrollmentId: id,
+      action: status === "Matriculado" ? "conversao" : "status",
+      description:
+        status === "Matriculado"
+          ? `Candidato convertido em aluno matriculado (antes: ${current.status}).`
+          : `Status alterado de ${current.status} para ${status}.`,
+      authorEmail: authorization.user.email,
+    });
+  }
+
+  return Response.json({
+    ok: true,
+    enrollment: { id, status },
+  });
 }
