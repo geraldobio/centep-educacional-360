@@ -18,8 +18,7 @@ export type EnrollmentRow = {
   createdAt: string;
 };
 
-type EnrollmentRecord = Omit<EnrollmentRow, "cpfMasked"> & {
-  cpf: string;
+type EnrollmentRecord = EnrollmentRow & {
   birthDate: string;
   message: string;
 };
@@ -78,11 +77,6 @@ function csvCell(value: string | number) {
   return `"${safeText.replace(/"/g, '""')}"`;
 }
 
-function maskCpf(cpf: string) {
-  const digits = cpf.replace(/\D/g, "");
-  return digits.length === 11 ? `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**` : "CPF protegido";
-}
-
 function whatsappUrl(row: EnrollmentRow | EnrollmentRecord) {
   const digits = row.phone.replace(/\D/g, "");
   const number = digits.startsWith("55") ? digits : `55${digits}`;
@@ -132,7 +126,6 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [updatingDocument, setUpdatingDocument] = useState<string | null>(null);
-  const [cpfVisible, setCpfVisible] = useState(false);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -190,7 +183,6 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
     setSelectedId(id);
     setDetail(null);
     setNoteDraft("");
-    setCpfVisible(false);
     void loadDetail(id);
   }
 
@@ -199,7 +191,6 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
     setDetail(null);
     setDetailFeedback("");
     setNoteDraft("");
-    setCpfVisible(false);
   }
 
   async function updateStatus(id: number, status: string) {
@@ -416,19 +407,7 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
                       <div className="candidate-section-title"><span>01</span><div><h3>Dados pessoais</h3><p>Informações informadas pelo candidato.</p></div></div>
                       <dl className="candidate-data-grid">
                         <div><dt>Nome completo</dt><dd>{detail.enrollment.name}</dd></div>
-                        <div>
-                          <dt>CPF</dt>
-                          <dd>{cpfVisible ? detail.enrollment.cpf : maskCpf(detail.enrollment.cpf)}</dd>
-                          <button
-                            type="button"
-                            className="online-open-record"
-                            aria-pressed={cpfVisible}
-                            aria-label={cpfVisible ? "Ocultar CPF completo" : "Mostrar CPF completo"}
-                            onClick={() => setCpfVisible((visible) => !visible)}
-                          >
-                            {cpfVisible ? "Ocultar CPF" : "Mostrar CPF"}
-                          </button>
-                        </div>
+                        <div><dt>CPF</dt><dd>{detail.enrollment.cpfMasked}</dd></div>
                         <div><dt>Nascimento</dt><dd>{formatBirthDate(detail.enrollment.birthDate)}</dd></div>
                         <div><dt>Cidade</dt><dd>{detail.enrollment.city}</dd></div>
                         <div><dt>E-mail</dt><dd><a href={`mailto:${detail.enrollment.email}`}>{detail.enrollment.email}</a></dd></div>
