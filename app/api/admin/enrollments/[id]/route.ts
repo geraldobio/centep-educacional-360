@@ -6,7 +6,7 @@ import {
   enrollmentNotes,
   enrollments,
 } from "../../../../../db/schema";
-import { authorizeAdminRequest, parseEnrollmentId } from "../../admin-request";
+import { adminJson, authorizeAdminRequest, parseEnrollmentId } from "../../admin-request";
 
 const enrollmentStatuses = new Set([
   "Nova",
@@ -26,7 +26,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   const id = await parseEnrollmentId(context.params);
   if (!id) {
-    return Response.json({ error: "Matrícula inválida." }, { status: 400 });
+    return adminJson({ error: "Matrícula inválida." }, { status: 400 });
   }
 
   const db = getDb();
@@ -37,7 +37,7 @@ export async function GET(request: Request, context: RouteContext) {
     .limit(1);
 
   if (!enrollment) {
-    return Response.json({ error: "Matrícula não encontrada." }, { status: 404 });
+    return adminJson({ error: "Matrícula não encontrada." }, { status: 404 });
   }
 
   const [notes, documents, history] = await Promise.all([
@@ -58,7 +58,7 @@ export async function GET(request: Request, context: RouteContext) {
       .orderBy(desc(enrollmentHistory.createdAt), desc(enrollmentHistory.id)),
   ]);
 
-  return Response.json({
+  return adminJson({
     enrollment,
     notes,
     documents,
@@ -84,19 +84,19 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const id = await parseEnrollmentId(context.params);
   if (!id) {
-    return Response.json({ error: "Matrícula inválida." }, { status: 400 });
+    return adminJson({ error: "Matrícula inválida." }, { status: 400 });
   }
 
   let payload: { status?: unknown };
   try {
     payload = (await request.json()) as { status?: unknown };
   } catch {
-    return Response.json({ error: "Dados inválidos." }, { status: 400 });
+    return adminJson({ error: "Dados inválidos." }, { status: 400 });
   }
 
   const status = typeof payload.status === "string" ? payload.status.trim() : "";
   if (!enrollmentStatuses.has(status)) {
-    return Response.json({ error: "Status inválido." }, { status: 400 });
+    return adminJson({ error: "Status inválido." }, { status: 400 });
   }
 
   const db = getDb();
@@ -107,7 +107,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     .limit(1);
 
   if (!current) {
-    return Response.json({ error: "Matrícula não encontrada." }, { status: 404 });
+    return adminJson({ error: "Matrícula não encontrada." }, { status: 404 });
   }
 
   if (current.status !== status) {
@@ -123,7 +123,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
   }
 
-  return Response.json({
+  return adminJson({
     ok: true,
     enrollment: { id, status },
   });
