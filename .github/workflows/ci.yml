@@ -45,6 +45,9 @@ jobs:
       - name: TypeScript
         run: pnpm run typecheck
 
+      - name: Cloudflare Access tests
+        run: pnpm run test:access
+
       - name: Production build
         run: pnpm run build
 
