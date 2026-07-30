@@ -53,3 +53,6 @@ jobs:
 
       - name: Verify Cloudflare build output
         run: test -f dist/server/wrangler.json
+
+      - name: Validate D1 migrations
+        run: pnpm run test:d1-migrations
