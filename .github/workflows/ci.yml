@@ -48,6 +48,9 @@ jobs:
       - name: Cloudflare Access tests
         run: pnpm run test:access
 
+      - name: Enrollment validation tests
+        run: pnpm run test:enrollment-validation
+
       - name: Production build
         run: pnpm run build
 
