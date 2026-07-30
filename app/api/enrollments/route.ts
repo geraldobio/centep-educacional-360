@@ -1,5 +1,4 @@
-import { getDb } from "../../../db";
-import { enrollmentHistory, enrollments } from "../../../db/schema";
+import { getD1Database } from "../../../db";
 
 type EnrollmentPayload = {
   name?: string;
@@ -63,18 +62,41 @@ export async function POST(request: Request) {
     }
 
     const protocol = `CENTEP-${new Date().getUTCFullYear()}-${crypto.randomUUID().split("-")[0].toUpperCase()}`;
-    const db = getDb();
-    const [created] = await db
-      .insert(enrollments)
-      .values({ protocol, ...data })
-      .returning({ id: enrollments.id });
+    const database = getD1Database();
 
-    await db.insert(enrollmentHistory).values({
-      enrollmentId: created.id,
-      action: "solicitacao",
-      description: "Solicitação de matrícula recebida pelo site.",
-      authorEmail: "site-publico",
-    });
+    const insertEnrollment = database
+      .prepare(
+        `INSERT INTO enrollments (
+          protocol, name, cpf, birth_date, email, phone, city, course, shift,
+          experience, message
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        protocol,
+        data.name,
+        data.cpf,
+        data.birthDate,
+        data.email,
+        data.phone,
+        data.city,
+        data.course,
+        data.shift,
+        data.experience,
+        data.message,
+      );
+
+    const insertHistory = database.prepare(
+      `INSERT INTO enrollment_history (
+        enrollment_id, action, description, author_email
+      ) VALUES (
+        last_insert_rowid(),
+        'solicitacao',
+        'Solicitação de matrícula recebida pelo site.',
+        'site-publico'
+      )`,
+    );
+
+    await database.batch([insertEnrollment, insertHistory]);
 
     return Response.json({ ok: true, protocol }, { status: 201 });
   } catch (error) {
