@@ -89,18 +89,18 @@ export default function EnrollmentPage() {
                 <span>Etapa única</span>
               </div>
 
-              <label className="online-field online-field-full"><span>Nome completo *</span><input name="name" autoComplete="name" required minLength={4} /></label>
+              <label className="online-field online-field-full"><span>Nome completo *</span><input name="name" autoComplete="name" required minLength={4} maxLength={120} /></label>
               <label className="online-field"><span>CPF *</span><input name="cpf" inputMode="numeric" required minLength={11} maxLength={14} placeholder="000.000.000-00" /></label>
-              <label className="online-field"><span>Data de nascimento *</span><input name="birthDate" type="date" required /></label>
-              <label className="online-field"><span>E-mail *</span><input name="email" type="email" autoComplete="email" required /></label>
-              <label className="online-field"><span>WhatsApp *</span><input name="phone" type="tel" autoComplete="tel" required minLength={10} /></label>
-              <label className="online-field"><span>Cidade *</span><input name="city" autoComplete="address-level2" required /></label>
+              <label className="online-field"><span>Data de nascimento *</span><input name="birthDate" type="date" required max={new Date().toISOString().slice(0, 10)} /></label>
+              <label className="online-field"><span>E-mail *</span><input name="email" type="email" autoComplete="email" required maxLength={160} /></label>
+              <label className="online-field"><span>WhatsApp *</span><input name="phone" type="tel" autoComplete="tel" required minLength={10} maxLength={20} /></label>
+              <label className="online-field"><span>Cidade *</span><input name="city" autoComplete="address-level2" required maxLength={100} /></label>
               <label className="online-field"><span>Curso desejado *</span><select name="course" required defaultValue=""><option value="" disabled>Selecione</option>{courseOptions.map((course) => <option key={course}>{course}</option>)}</select></label>
               <label className="online-field"><span>Melhor horário *</span><select name="shift" required defaultValue=""><option value="" disabled>Selecione</option><option>Manhã</option><option>Tarde</option><option>Noite</option><option>Final de semana</option></select></label>
               <label className="online-field"><span>Experiência com áudio</span><select name="experience" defaultValue="Estou começando agora"><option>Estou começando agora</option><option>Tenho experiência básica</option><option>Já trabalho na área</option><option>Busco especialização</option></select></label>
               <label className="online-field online-field-full"><span>Objetivo profissional</span><textarea name="message" maxLength={1000} placeholder="Conte brevemente o que deseja aprender." /></label>
               <label className="online-honeypot" aria-hidden="true"><span>Website</span><input name="website" tabIndex={-1} autoComplete="off" /></label>
-              <label className="online-consent"><input type="checkbox" required /><span>Autorizo o CENTEP a utilizar estes dados para atendimento e continuidade do processo de matrícula.</span></label>
+              <label className="online-consent"><input name="consent" value="accepted" type="checkbox" required /><span>Autorizo o CENTEP a utilizar estes dados para atendimento e continuidade do processo de matrícula.</span></label>
               {error && <p className="online-form-error" role="alert">{error}</p>}
               <div className="online-form-actions"><small>🔒 Envio protegido e armazenado online.</small><button type="submit" disabled={submitting}>{submitting ? "Enviando…" : "Enviar solicitação"}</button></div>
             </form>
