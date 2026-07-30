@@ -1,5 +1,5 @@
 import { asc, desc, eq } from "drizzle-orm";
-import { getDb } from "../../../../../db";
+import { getD1Database, getDb } from "../../../../../db";
 import {
   enrollmentDocuments,
   enrollmentHistory,
@@ -111,16 +111,24 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (current.status !== status) {
-    await db.update(enrollments).set({ status }).where(eq(enrollments.id, id));
-    await db.insert(enrollmentHistory).values({
-      enrollmentId: id,
-      action: status === "Matriculado" ? "conversao" : "status",
-      description:
-        status === "Matriculado"
-          ? `Candidato convertido em aluno matriculado (antes: ${current.status}).`
-          : `Status alterado de ${current.status} para ${status}.`,
-      authorEmail: authorization.user.email,
-    });
+    const database = getD1Database();
+    const description =
+      status === "Matriculado"
+        ? `Candidato marcado como matriculado (antes: ${current.status}).`
+        : `Status alterado de ${current.status} para ${status}.`;
+
+    const updateStatus = database
+      .prepare("UPDATE enrollments SET status = ? WHERE id = ?")
+      .bind(status, id);
+    const insertHistory = database
+      .prepare(
+        `INSERT INTO enrollment_history (
+          enrollment_id, action, description, author_email
+        ) VALUES (?, 'status', ?, ?)`,
+      )
+      .bind(id, description, authorization.user.email);
+
+    await database.batch([updateStatus, insertHistory]);
   }
 
   return adminJson({
