@@ -28,6 +28,8 @@ interface ExecutionContext {
 const ACCESS_ASSERTION_HEADER = "cf-access-jwt-assertion";
 const ACCESS_EMAIL_HEADER = "cf-access-authenticated-user-email";
 const OPENAI_EMAIL_HEADER = "oai-authenticated-user-email";
+const OPENAI_FULL_NAME_HEADER = "oai-authenticated-user-full-name";
+const OPENAI_FULL_NAME_ENCODING_HEADER = "oai-authenticated-user-full-name-encoding";
 const VERIFIED_ACCESS_EMAIL_HEADER = "x-centep-verified-access-email";
 
 // Image security config. SVG sources with .svg extension auto-skip the
@@ -84,10 +86,14 @@ async function authorizeCloudflareAccessRequest(
     });
     const headers = new Headers(request.headers);
 
-    // Never pass identity headers supplied by the client. The application only
-    // receives the identity extracted from the verified Access JWT.
+    // Do not pass authentication material or identity headers supplied by the
+    // client. The application only receives the email extracted from the
+    // verified Access JWT.
+    headers.delete(ACCESS_ASSERTION_HEADER);
     headers.delete(ACCESS_EMAIL_HEADER);
     headers.delete(OPENAI_EMAIL_HEADER);
+    headers.delete(OPENAI_FULL_NAME_HEADER);
+    headers.delete(OPENAI_FULL_NAME_ENCODING_HEADER);
     headers.delete(VERIFIED_ACCESS_EMAIL_HEADER);
     headers.set(VERIFIED_ACCESS_EMAIL_HEADER, identity.email);
 
