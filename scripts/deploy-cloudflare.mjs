@@ -1,4 +1,4 @@
-import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const configPath = "dist/server/wrangler.json";
@@ -17,8 +17,12 @@ if (database) {
     throw new Error("Migrações do banco D1 não foram encontradas.");
   }
 
+  rmSync(migrationsTarget, { recursive: true, force: true });
   cpSync(migrationsSource, migrationsTarget, { recursive: true });
-  config.migrations_dir = "migrations";
+  database.migrations_dir = "migrations";
+  delete database.migrations_pattern;
+  delete config.migrations_dir;
+  delete config.migrations_pattern;
   writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 
   runWrangler([
