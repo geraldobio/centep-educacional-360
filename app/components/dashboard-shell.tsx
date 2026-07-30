@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 import { Brand } from "./site-chrome";
-import { clearDemoSession, DemoRole, DemoSession, readDemoSession } from "../lib/demo-auth";
+import {
+  clearDemoSession,
+  DemoRole,
+  DemoSession,
+  SESSION_KEY,
+} from "../lib/demo-auth";
 
 type NavItem = { icon: string; label: string; href: string; active?: boolean };
 
@@ -30,20 +35,58 @@ const fallbacks: Record<DemoRole, DemoSession> = {
   admin: { role: "admin", name: "Administração CENTEP", email: "admin@centep.com.br" },
 };
 
+function subscribeDemoSession(onStoreChange: () => void) {
+  const listener = (event: StorageEvent) => {
+    if (!event.key || event.key === SESSION_KEY) onStoreChange();
+  };
+  window.addEventListener("storage", listener);
+  return () => window.removeEventListener("storage", listener);
+}
+
+function getDemoSessionSnapshot() {
+  try {
+    return window.localStorage.getItem(SESSION_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function getDemoSessionServerSnapshot() {
+  return "";
+}
+
+function isDemoRole(value: unknown): value is DemoRole {
+  return value === "student" || value === "teacher" || value === "admin";
+}
+
+function parseDemoSession(raw: string): DemoSession | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<DemoSession>;
+    if (!isDemoRole(value.role) || typeof value.name !== "string" || typeof value.email !== "string") {
+      return null;
+    }
+    return { role: value.role, name: value.name, email: value.email };
+  } catch {
+    return null;
+  }
+}
+
 export function DashboardShell({ role, children }: { role: DemoRole; children: ReactNode }) {
   const router = useRouter();
-  const [session, setSession] = useState<DemoSession | null>(null);
-  const [ready, setReady] = useState(false);
+  const sessionSnapshot = useSyncExternalStore(
+    subscribeDemoSession,
+    getDemoSessionSnapshot,
+    getDemoSessionServerSnapshot,
+  );
+  const session = parseDemoSession(sessionSnapshot);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const current = readDemoSession();
+    const current = parseDemoSession(getDemoSessionSnapshot());
     if (!current || current.role !== role) {
       router.replace("/login");
-      return;
     }
-    setSession(current);
-    setReady(true);
   }, [role, router]);
 
   const logout = () => {
@@ -51,7 +94,9 @@ export function DashboardShell({ role, children }: { role: DemoRole; children: R
     router.push("/login");
   };
 
-  if (!ready || !session) return <div className="empty-guard">Preparando seu ambiente CENTEP…</div>;
+  if (!session || session.role !== role) {
+    return <div className="empty-guard">Preparando seu ambiente CENTEP…</div>;
+  }
 
   const name = session.name || fallbacks[role].name;
   const initials = name.split(" ").slice(0, 2).map((part) => part[0]).join("");

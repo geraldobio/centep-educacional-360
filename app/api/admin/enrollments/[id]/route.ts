@@ -1,7 +1,12 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "../../../../../db";
-import { enrollments } from "../../../../../db/schema";
-import { getChatGPTUser, isCentepAdminEmail } from "../../../../chatgpt-auth";
+import { asc, desc, eq } from "drizzle-orm";
+import { getD1Database, getDb } from "../../../../../db";
+import {
+  enrollmentDocuments,
+  enrollmentHistory,
+  enrollmentNotes,
+  enrollments,
+} from "../../../../../db/schema";
+import { adminJson, authorizeAdminRequest, parseEnrollmentId } from "../../admin-request";
 
 const enrollmentStatuses = new Set([
   "Nova",
@@ -15,49 +20,128 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+function maskCpf(cpf: string) {
+  const digits = cpf.replace(/\D/g, "");
+  return digits.length === 11 ? `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**` : "CPF protegido";
+}
+
+export async function GET(request: Request, context: RouteContext) {
+  const authorization = await authorizeAdminRequest(request);
+  if ("response" in authorization) return authorization.response;
+
+  const id = await parseEnrollmentId(context.params);
+  if (!id) {
+    return adminJson({ error: "Matrícula inválida." }, { status: 400 });
+  }
+
+  const db = getDb();
+  const [enrollment] = await db
+    .select()
+    .from(enrollments)
+    .where(eq(enrollments.id, id))
+    .limit(1);
+
+  if (!enrollment) {
+    return adminJson({ error: "Matrícula não encontrada." }, { status: 404 });
+  }
+
+  const [notes, documents, history] = await Promise.all([
+    db
+      .select()
+      .from(enrollmentNotes)
+      .where(eq(enrollmentNotes.enrollmentId, id))
+      .orderBy(desc(enrollmentNotes.createdAt), desc(enrollmentNotes.id)),
+    db
+      .select()
+      .from(enrollmentDocuments)
+      .where(eq(enrollmentDocuments.enrollmentId, id))
+      .orderBy(asc(enrollmentDocuments.label)),
+    db
+      .select()
+      .from(enrollmentHistory)
+      .where(eq(enrollmentHistory.enrollmentId, id))
+      .orderBy(desc(enrollmentHistory.createdAt), desc(enrollmentHistory.id)),
+  ]);
+  const { cpf, ...safeEnrollment } = enrollment;
+
+  return adminJson({
+    enrollment: {
+      ...safeEnrollment,
+      cpfMasked: maskCpf(cpf),
+    },
+    notes,
+    documents,
+    history: history.some((item) => item.action === "solicitacao")
+      ? history
+      : [
+          ...history,
+          {
+            id: 0,
+            enrollmentId: enrollment.id,
+            action: "solicitacao",
+            description: "Solicitação de matrícula recebida pelo site.",
+            authorEmail: "site-publico",
+            createdAt: enrollment.createdAt,
+          },
+        ],
+  });
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
-  const user = await getChatGPTUser();
-  if (!user) {
-    return Response.json({ error: "Faça login para continuar." }, { status: 401 });
-  }
-  if (!isCentepAdminEmail(user.email)) {
-    return Response.json({ error: "Acesso não autorizado." }, { status: 403 });
-  }
+  const authorization = await authorizeAdminRequest(request);
+  if ("response" in authorization) return authorization.response;
 
-  const requestOrigin = request.headers.get("origin");
-  const requestHost = request.headers.get("host");
-  if (requestOrigin && requestHost && new URL(requestOrigin).host !== requestHost) {
-    return Response.json({ error: "Origem da solicitação não permitida." }, { status: 403 });
-  }
-
-  const { id: rawId } = await context.params;
-  const id = Number.parseInt(rawId, 10);
-  if (!Number.isSafeInteger(id) || id < 1) {
-    return Response.json({ error: "Matrícula inválida." }, { status: 400 });
+  const id = await parseEnrollmentId(context.params);
+  if (!id) {
+    return adminJson({ error: "Matrícula inválida." }, { status: 400 });
   }
 
   let payload: { status?: unknown };
   try {
     payload = (await request.json()) as { status?: unknown };
   } catch {
-    return Response.json({ error: "Dados inválidos." }, { status: 400 });
+    return adminJson({ error: "Dados inválidos." }, { status: 400 });
   }
 
   const status = typeof payload.status === "string" ? payload.status.trim() : "";
   if (!enrollmentStatuses.has(status)) {
-    return Response.json({ error: "Status inválido." }, { status: 400 });
+    return adminJson({ error: "Status inválido." }, { status: 400 });
   }
 
   const db = getDb();
-  const updated = await db
-    .update(enrollments)
-    .set({ status })
+  const [current] = await db
+    .select({ id: enrollments.id, status: enrollments.status })
+    .from(enrollments)
     .where(eq(enrollments.id, id))
-    .returning({ id: enrollments.id, status: enrollments.status });
+    .limit(1);
 
-  if (!updated.length) {
-    return Response.json({ error: "Matrícula não encontrada." }, { status: 404 });
+  if (!current) {
+    return adminJson({ error: "Matrícula não encontrada." }, { status: 404 });
   }
 
-  return Response.json({ ok: true, enrollment: updated[0] });
+  if (current.status !== status) {
+    const database = getD1Database();
+    const description =
+      status === "Matriculado"
+        ? `Candidato marcado como matriculado (antes: ${current.status}).`
+        : `Status alterado de ${current.status} para ${status}.`;
+
+    const updateStatus = database
+      .prepare("UPDATE enrollments SET status = ? WHERE id = ?")
+      .bind(status, id);
+    const insertHistory = database
+      .prepare(
+        `INSERT INTO enrollment_history (
+          enrollment_id, action, description, author_email
+        ) VALUES (?, 'status', ?, ?)`,
+      )
+      .bind(id, description, authorization.user.email);
+
+    await database.batch([updateStatus, insertHistory]);
+  }
+
+  return adminJson({
+    ok: true,
+    enrollment: { id, status },
+  });
 }

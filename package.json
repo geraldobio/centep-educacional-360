@@ -9,9 +9,14 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs",
+    "deploy:staging": "node scripts/deploy-cloudflare-staging.mjs",
     "start": "vinext start",
-    "test": "pnpm run build && node --test tests/rendered-html.test.mjs",
+    "test": "pnpm run build && node --test tests/rendered-html.test.mjs && node --test tests/cloudflare-access.test.mjs && node --test tests/enrollment-validation.test.mjs",
+    "test:access": "node --test tests/cloudflare-access.test.mjs",
+    "test:enrollment-validation": "node --test tests/enrollment-validation.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "typecheck": "tsc --noEmit",
+    "test:d1-migrations": "node scripts/validate-d1-migrations.mjs",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
