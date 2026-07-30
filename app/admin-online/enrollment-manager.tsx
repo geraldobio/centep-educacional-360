@@ -71,7 +71,11 @@ function normalize(value: string) {
 }
 
 function csvCell(value: string | number) {
-  return `"${String(value).replace(/"/g, '""')}"`;
+  const text = String(value);
+  // Prefix spreadsheet formulas in user-controlled values so opening the CSV
+  // cannot execute them as commands or external links.
+  const safeText = /^\s*[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safeText.replace(/"/g, '""')}"`;
 }
 
 function whatsappUrl(row: EnrollmentRow | EnrollmentRecord) {
@@ -191,7 +195,10 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
   }
 
   async function updateStatus(id: number, status: string) {
-    const currentStatus = rows.find((row) => row.id === id)?.status;
+    const currentStatus =
+      detail?.enrollment.id === id
+        ? detail.enrollment.status
+        : rows.find((row) => row.id === id)?.status;
     if (
       status === "Matriculado" &&
       currentStatus !== "Matriculado" &&
