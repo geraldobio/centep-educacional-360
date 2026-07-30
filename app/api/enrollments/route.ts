@@ -42,6 +42,10 @@ function publicJson(body: unknown, init: ResponseInit = {}) {
   return Response.json(body, { ...init, headers });
 }
 
+function isEnrollmentPayload(value: unknown): value is EnrollmentPayload {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function isValidCpf(cpf: string) {
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
 
@@ -88,7 +92,11 @@ export async function POST(request: Request) {
     if (new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BYTES) {
       return publicJson({ error: "A solicitação excede o tamanho permitido." }, { status: 413 });
     }
-    payload = JSON.parse(rawBody) as EnrollmentPayload;
+    const parsedPayload: unknown = JSON.parse(rawBody);
+    if (!isEnrollmentPayload(parsedPayload)) {
+      return publicJson({ error: "Dados inválidos." }, { status: 400 });
+    }
+    payload = parsedPayload;
   } catch {
     return publicJson({ error: "Dados inválidos." }, { status: 400 });
   }
