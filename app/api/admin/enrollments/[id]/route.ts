@@ -20,6 +20,11 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+function maskCpf(cpf: string) {
+  const digits = cpf.replace(/\D/g, "");
+  return digits.length === 11 ? `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**` : "CPF protegido";
+}
+
 export async function GET(request: Request, context: RouteContext) {
   const authorization = await authorizeAdminRequest(request);
   if ("response" in authorization) return authorization.response;
@@ -57,9 +62,13 @@ export async function GET(request: Request, context: RouteContext) {
       .where(eq(enrollmentHistory.enrollmentId, id))
       .orderBy(desc(enrollmentHistory.createdAt), desc(enrollmentHistory.id)),
   ]);
+  const { cpf, ...safeEnrollment } = enrollment;
 
   return adminJson({
-    enrollment,
+    enrollment: {
+      ...safeEnrollment,
+      cpfMasked: maskCpf(cpf),
+    },
     notes,
     documents,
     history: history.some((item) => item.action === "solicitacao")
