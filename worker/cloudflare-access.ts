@@ -202,7 +202,7 @@ function decodeJsonSegment<T>(segment: string): T {
   }
 }
 
-function decodeBase64Url(value: string): Uint8Array {
+function decodeBase64Url(value: string): ArrayBuffer {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
   let binary: string;
@@ -212,9 +212,10 @@ function decodeBase64Url(value: string): Uint8Array {
     throw new Error("Malformed Cloudflare Access token encoding.");
   }
 
-  const bytes = new Uint8Array(binary.length);
+  const buffer = new ArrayBuffer(binary.length);
+  const bytes = new Uint8Array(buffer);
   for (let index = 0; index < binary.length; index += 1) {
     bytes[index] = binary.charCodeAt(index);
   }
-  return bytes;
+  return buffer;
 }
