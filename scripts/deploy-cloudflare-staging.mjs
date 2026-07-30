@@ -15,14 +15,19 @@ const stagingConfigPath = "dist/server/wrangler.staging.json";
 const migrationsSource = "drizzle";
 const migrationsTarget = "dist/server/migrations";
 const backupDirectory = process.env.D1_STAGING_BACKUP_DIR?.trim() || "backups/d1-staging";
+const dryRun = process.env.STAGING_DRY_RUN === "1";
+const skipBuild = process.env.STAGING_SKIP_BUILD === "1";
 
 const workerName = required("STAGING_WORKER_NAME");
 const databaseId = required("STAGING_D1_DATABASE_ID");
 const databaseName = required("STAGING_D1_DATABASE_NAME");
 const accessTeamDomain = required("CF_ACCESS_TEAM_DOMAIN");
 const accessAudience = required("CF_ACCESS_AUD");
-required("CLOUDFLARE_ACCOUNT_ID");
-required("CLOUDFLARE_API_TOKEN");
+
+if (!dryRun) {
+  required("CLOUDFLARE_ACCOUNT_ID");
+  required("CLOUDFLARE_API_TOKEN");
+}
 
 if (process.env.CONFIRM_STAGING_DEPLOY !== "HOMOLOGACAO") {
   throw new Error(
@@ -35,14 +40,20 @@ assertStagingResource("STAGING_D1_DATABASE_NAME", databaseName);
 
 const normalizedTeamDomain = normalizeTeamDomain(accessTeamDomain);
 
-runPnpm(["run", "build"], {
-  CLOUDFLARE_DIRECT_DEPLOY: "1",
-  CLOUDFLARE_D1_DATABASE_ID: databaseId,
-  CLOUDFLARE_D1_DATABASE_NAME: databaseName,
-});
+if (!skipBuild) {
+  runPnpm(["run", "build"], {
+    CLOUDFLARE_DIRECT_DEPLOY: "1",
+    CLOUDFLARE_D1_DATABASE_ID: databaseId,
+    CLOUDFLARE_D1_DATABASE_NAME: databaseName,
+  });
+}
 
 if (!existsSync(generatedConfigPath)) {
-  throw new Error("Build da aplicação não gerou dist/server/wrangler.json.");
+  throw new Error(
+    skipBuild
+      ? "Build da aplicação não encontrado para o dry run. Execute pnpm run build primeiro."
+      : "Build da aplicação não gerou dist/server/wrangler.json.",
+  );
 }
 if (!existsSync(migrationsSource)) {
   throw new Error("Migrações do banco D1 não foram encontradas.");
@@ -76,7 +87,7 @@ rmSync(migrationsTarget, { recursive: true, force: true });
 cpSync(migrationsSource, migrationsTarget, { recursive: true });
 writeFileSync(stagingConfigPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 
-if (process.env.STAGING_DRY_RUN === "1") {
+if (dryRun) {
   runWrangler([
     "deploy",
     "--dry-run",
