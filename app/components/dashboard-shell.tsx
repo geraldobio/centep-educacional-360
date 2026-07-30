@@ -55,12 +55,15 @@ function getDemoSessionServerSnapshot() {
   return "";
 }
 
+function isDemoRole(value: unknown): value is DemoRole {
+  return value === "student" || value === "teacher" || value === "admin";
+}
+
 function parseDemoSession(raw: string): DemoSession | null {
   if (!raw) return null;
   try {
     const value = JSON.parse(raw) as Partial<DemoSession>;
-    const validRole = value.role === "student" || value.role === "teacher" || value.role === "admin";
-    if (!validRole || typeof value.name !== "string" || typeof value.email !== "string") {
+    if (!isDemoRole(value.role) || typeof value.name !== "string" || typeof value.email !== "string") {
       return null;
     }
     return { role: value.role, name: value.name, email: value.email };
