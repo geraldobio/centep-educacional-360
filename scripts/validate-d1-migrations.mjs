@@ -31,8 +31,17 @@ mkdirSync(dirname(testConfigPath), { recursive: true });
 
 const testConfig = {
   ...config,
-  migrations_dir: "migrations-test",
+  d1_databases: config.d1_databases.map((database) => {
+    if (database.binding !== binding) return database;
+    const configuredDatabase = {
+      ...database,
+      migrations_dir: "migrations-test",
+    };
+    delete configuredDatabase.migrations_pattern;
+    return configuredDatabase;
+  }),
 };
+delete testConfig.migrations_dir;
 delete testConfig.migrations_pattern;
 writeFileSync(testConfigPath, `${JSON.stringify(testConfig, null, 2)}\n`, "utf8");
 
