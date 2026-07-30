@@ -134,7 +134,6 @@ runWrangler([
   "--config",
   configPath,
   "--keep-vars",
-  "--strict",
   "--preview-alias",
   "release-candidate",
   "--message",
@@ -187,6 +186,7 @@ function runWrangler(args, captureOutput = false) {
   const result = spawnSync(command, ["exec", "wrangler", ...args], {
     encoding: "utf8",
     env: process.env,
+    shell: process.platform === "win32",
     stdio: captureOutput ? ["ignore", "pipe", "inherit"] : "inherit",
   });
 
