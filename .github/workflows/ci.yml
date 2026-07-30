@@ -60,5 +60,17 @@ jobs:
       - name: Verify Cloudflare build output
         run: test -f dist/server/wrangler.json
 
+      - name: Validate staging Cloudflare package
+        env:
+          CONFIRM_STAGING_DEPLOY: HOMOLOGACAO
+          STAGING_DRY_RUN: "1"
+          STAGING_SKIP_BUILD: "1"
+          STAGING_WORKER_NAME: centep-homolog-ci
+          STAGING_D1_DATABASE_ID: 11111111-1111-4111-8111-111111111111
+          STAGING_D1_DATABASE_NAME: centep-homolog-ci-db
+          CF_ACCESS_TEAM_DOMAIN: https://centep-homolog-ci.cloudflareaccess.com
+          CF_ACCESS_AUD: ci-placeholder-audience
+        run: pnpm run deploy:staging
+
       - name: Validate D1 migrations
         run: pnpm run test:d1-migrations
