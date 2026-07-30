@@ -102,7 +102,7 @@ function historyLabel(action: string) {
   const labels: Record<string, string> = {
     solicitacao: "Solicitação",
     status: "Status",
-    conversao: "Matrícula",
+    conversao: "Confirmação administrativa",
     observacao: "Observação",
     documento: "Documento",
   };
@@ -191,6 +191,17 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
   }
 
   async function updateStatus(id: number, status: string) {
+    const currentStatus = rows.find((row) => row.id === id)?.status;
+    if (
+      status === "Matriculado" &&
+      currentStatus !== "Matriculado" &&
+      !window.confirm(
+        "Marcar este candidato como matriculado? Esta ação confirma apenas o status administrativo e não cria a ficha completa de aluno, turma ou financeiro.",
+      )
+    ) {
+      return;
+    }
+
     setUpdatingId(id);
     setFeedback("");
     setDetailFeedback("");
@@ -205,7 +216,7 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
       setRows((current) => current.map((row) => (row.id === id ? { ...row, status } : row)));
       setFeedback(
         status === "Matriculado"
-          ? "Candidato convertido em aluno matriculado."
+          ? "Candidato marcado como matriculado no acompanhamento administrativo."
           : "Status atualizado com sucesso.",
       );
       if (selectedId === id) await loadDetail(id, true);
@@ -307,7 +318,7 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
       <div className="online-admin-kpis">
         <article><span>Solicitações</span><strong>{rows.length}</strong><small>Total registrado</small></article>
         <article><span>Novas</span><strong>{newCount}</strong><small>Aguardando contato</small></article>
-        <article><span>Matriculados</span><strong>{enrolledCount}</strong><small>Conversões confirmadas</small></article>
+        <article><span>Matriculados</span><strong>{enrolledCount}</strong><small>Confirmações administrativas</small></article>
         <article><span>Banco</span><strong className="online-status">ATIVO</strong><small>Armazenamento central</small></article>
       </div>
 
@@ -429,10 +440,10 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
                   <aside>
                     <section className="candidate-action-card">
                       <span>Próxima etapa</span>
-                      <h3>{detail.enrollment.status === "Matriculado" ? "Aluno matriculado" : "Concluir atendimento"}</h3>
-                      <p>{detail.enrollment.status === "Matriculado" ? "A conversão foi registrada no histórico." : "Atualize o status ou confirme a matrícula oficial."}</p>
+                      <h3>{detail.enrollment.status === "Matriculado" ? "Status administrativo confirmado" : "Concluir atendimento"}</h3>
+                      <p>{detail.enrollment.status === "Matriculado" ? "O candidato foi marcado como matriculado. A criação da ficha completa de aluno ocorrerá em etapa própria." : "Atualize o andamento ou marque o candidato como matriculado."}</p>
                       <label><span>Status atual</span><select value={detail.enrollment.status} disabled={updatingId === selectedId} onChange={(event) => void updateStatus(selectedId, event.target.value)}>{statuses.map((status) => <option key={status}>{status}</option>)}</select></label>
-                      {detail.enrollment.status !== "Matriculado" && <button type="button" className="candidate-convert" disabled={updatingId === selectedId} onClick={() => void updateStatus(selectedId, "Matriculado")}>Converter em matrícula oficial</button>}
+                      {detail.enrollment.status !== "Matriculado" && <button type="button" className="candidate-convert" disabled={updatingId === selectedId} onClick={() => void updateStatus(selectedId, "Matriculado")}>Marcar como matriculado</button>}
                       <a className="candidate-whatsapp" href={whatsappUrl(detail.enrollment)} target="_blank" rel="noreferrer">Conversar pelo WhatsApp</a>
                     </section>
 
