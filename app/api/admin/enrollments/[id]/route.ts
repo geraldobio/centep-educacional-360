@@ -5,6 +5,7 @@ import {
   enrollmentHistory,
   enrollmentNotes,
   enrollments,
+  students,
 } from "../../../../../db/schema";
 import { adminJson, authorizeAdminRequest, parseEnrollmentId } from "../../admin-request";
 
@@ -18,6 +19,17 @@ const enrollmentStatuses = new Set([
 
 type RouteContext = {
   params: Promise<{ id: string }>;
+};
+
+type StudentSummaryRow = {
+  id: string;
+  registration_number: string;
+  academic_enrollment_id: string | null;
+  course: string | null;
+  class_name: string | null;
+  shift: string | null;
+  status: string | null;
+  enrolled_at: string | null;
 };
 
 function maskCpf(cpf: string) {
@@ -45,7 +57,9 @@ export async function GET(request: Request, context: RouteContext) {
     return adminJson({ error: "Matrícula não encontrada." }, { status: 404 });
   }
 
-  const [notes, documents, history] = await Promise.all([
+  const database = getD1Database();
+
+  const [notes, documents, history, student] = await Promise.all([
     db
       .select()
       .from(enrollmentNotes)
@@ -61,6 +75,26 @@ export async function GET(request: Request, context: RouteContext) {
       .from(enrollmentHistory)
       .where(eq(enrollmentHistory.enrollmentId, id))
       .orderBy(desc(enrollmentHistory.createdAt), desc(enrollmentHistory.id)),
+    database
+      .prepare(
+        `SELECT
+          students.id,
+          students.registration_number,
+          academic_enrollments.id AS academic_enrollment_id,
+          academic_enrollments.course,
+          academic_enrollments.class_name,
+          academic_enrollments.shift,
+          academic_enrollments.status,
+          academic_enrollments.enrolled_at
+        FROM students
+        LEFT JOIN academic_enrollments
+          ON academic_enrollments.student_id = students.id
+        WHERE students.source_enrollment_id = ?
+        ORDER BY academic_enrollments.created_at DESC
+        LIMIT 1`,
+      )
+      .bind(id)
+      .first<StudentSummaryRow>(),
   ]);
   const { cpf, ...safeEnrollment } = enrollment;
 
@@ -71,7 +105,23 @@ export async function GET(request: Request, context: RouteContext) {
     },
     notes,
     documents,
-    history: history.some((item) => item.action === "solicitacao")
+    student: student
+      ? {
+          id: student.id,
+          registrationNumber: student.registration_number,
+          academicEnrollment: student.academic_enrollment_id
+            ? {
+                id: student.academic_enrollment_id,
+                course: student.course,
+                className: student.class_name,
+                shift: student.shift,
+                status: student.status,
+                enrolledAt: student.enrolled_at,
+              }
+            : null,
+        }
+      : null,
+    history: history.some((item: { action: string }) => item.action === "solicitacao")
       ? history
       : [
           ...history,
@@ -117,6 +167,22 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (!current) {
     return adminJson({ error: "Matrícula não encontrada." }, { status: 404 });
+  }
+
+  const [student] = await db
+    .select({ id: students.id })
+    .from(students)
+    .where(eq(students.sourceEnrollmentId, id))
+    .limit(1);
+
+  if (student && status !== "Matriculado") {
+    return adminJson(
+      {
+        error:
+          "O status não pode ser alterado porque este candidato já possui uma ficha de aluno.",
+      },
+      { status: 409 },
+    );
   }
 
   if (current.status !== status) {

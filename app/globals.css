@@ -264,3 +264,47 @@ button { cursor: pointer; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; transition:none !important; } }
+
+/* Academic student conversion */
+.candidate-class-field{margin-top:9px}
+.candidate-action-card input{
+  width:100%;
+  height:34px;
+  padding:0 9px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:8px;
+  outline:0;
+  color:#fff;
+  background:#102f4c;
+  font-size:8px
+}
+.candidate-action-card input::placeholder{color:#7891a8}
+.candidate-action-card input:focus{
+  border-color:#67b7f7;
+  box-shadow:0 0 0 3px rgba(103,183,247,.12)
+}
+.candidate-action-card input:disabled{opacity:.55}
+.candidate-student-summary{
+  display:grid;
+  gap:7px;
+  margin:0 0 10px
+}
+.candidate-student-summary>div{
+  padding:9px 10px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;
+  background:rgba(255,255,255,.05)
+}
+.candidate-student-summary dt{
+  color:#8fa9bf;
+  font-size:6px;
+  font-weight:850;
+  text-transform:uppercase
+}
+.candidate-student-summary dd{
+  margin:4px 0 0;
+  color:#fff;
+  font-size:8px;
+  font-weight:800;
+  overflow-wrap:anywhere
+}
