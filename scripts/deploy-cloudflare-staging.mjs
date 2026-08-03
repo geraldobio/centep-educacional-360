@@ -167,11 +167,17 @@ function createBackupPath() {
 }
 
 function runPnpm(args, extraEnv = {}) {
-  const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const result = spawnSync(command, args, {
+  const isWindows = process.platform === "win32";
+  const command = isWindows ? (process.env.ComSpec || "cmd.exe") : "pnpm";
+  const commandArgs = isWindows
+    ? ["/d", "/s", "/c", "pnpm.cmd", ...args]
+    : args;
+
+  const result = spawnSync(command, commandArgs, {
     stdio: "inherit",
     env: { ...process.env, ...extraEnv },
   });
+
   finish(result);
 }
 
