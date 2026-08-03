@@ -99,7 +99,6 @@ export function AcademicEnrollmentEditor({
           },
           body: JSON.stringify({
             academicEnrollmentId: saved.id,
-            course: saved.course,
             className: normalizedClassName,
             shift: normalizedShift,
             status,

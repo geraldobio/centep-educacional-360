@@ -56,7 +56,6 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   let payload: {
     academicEnrollmentId?: unknown;
-    course?: unknown;
     className?: unknown;
     shift?: unknown;
     status?: unknown;
@@ -69,7 +68,6 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const academicEnrollmentId = normalizeText(payload.academicEnrollmentId);
-  const course = normalizeText(payload.course);
   const className = normalizeText(payload.className);
   const shift = normalizeText(payload.shift);
   const status = normalizeText(payload.status);
@@ -81,12 +79,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  if (!isValidText(course, 2, 100)) {
-    return adminJson(
-      { error: "Informe um curso válido, com 2 a 100 caracteres." },
-      { status: 400 },
-    );
-  }
 
   if (!isValidText(className, 2, 80)) {
     return adminJson(
@@ -140,9 +132,6 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const changes: string[] = [];
 
-  if (current.course !== course) {
-    changes.push(`curso de "${current.course}" para "${course}"`);
-  }
 
   if (current.class_name !== className) {
     changes.push(`turma de "${current.class_name}" para "${className}"`);
@@ -162,7 +151,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       unchanged: true,
       academicEnrollment: {
         id: academicEnrollmentId,
-        course,
+        course: current.course,
         className,
         shift,
         status,
@@ -178,7 +167,6 @@ export async function PATCH(request: Request, context: RouteContext) {
         .prepare(
           `UPDATE academic_enrollments
            SET
-             course = ?,
              class_name = ?,
              shift = ?,
              status = ?,
@@ -187,7 +175,6 @@ export async function PATCH(request: Request, context: RouteContext) {
              AND student_id = ?`,
         )
         .bind(
-          course,
           className,
           shift,
           status,
