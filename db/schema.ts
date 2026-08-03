@@ -82,3 +82,47 @@ export const enrollmentDocuments = sqliteTable(
     index("enrollment_documents_status_idx").on(table.status),
   ],
 );
+
+export const students = sqliteTable(
+  "students",
+  {
+    id: text("id").primaryKey(),
+    sourceEnrollmentId: integer("source_enrollment_id")
+      .notNull()
+      .references(() => enrollments.id, { onDelete: "restrict" }),
+    registrationNumber: text("registration_number").notNull(),
+    createdBy: text("created_by").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("students_source_enrollment_unique").on(table.sourceEnrollmentId),
+    uniqueIndex("students_registration_number_unique").on(table.registrationNumber),
+  ],
+);
+
+export const academicEnrollments = sqliteTable(
+  "academic_enrollments",
+  {
+    id: text("id").primaryKey(),
+    studentId: text("student_id")
+      .notNull()
+      .references(() => students.id, { onDelete: "cascade" }),
+    course: text("course").notNull(),
+    className: text("class_name").notNull(),
+    shift: text("shift").notNull(),
+    status: text("status").notNull().default("Ativa"),
+    enrolledAt: text("enrolled_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    createdBy: text("created_by").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("academic_enrollments_student_course_class_unique").on(
+      table.studentId,
+      table.course,
+      table.className,
+    ),
+    index("academic_enrollments_status_idx").on(table.status),
+    index("academic_enrollments_course_class_idx").on(table.course, table.className),
+  ],
+);

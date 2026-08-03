@@ -69,6 +69,12 @@ try {
   );
   applyMigrations();
 
+  copyFileSync(
+    resolve("drizzle/0002_unique_lockjaw.sql"),
+    resolve(migrationsDir, "0002_unique_lockjaw.sql"),
+  );
+  applyMigrations();
+
   const schemaCheck = queryOne(`
     SELECT
       (SELECT COUNT(*) FROM enrollments WHERE protocol = 'CENTEP-TEST-0001') AS enrollment_count,
@@ -88,6 +94,25 @@ try {
   assertNumber(schemaCheck.enrollment_count, 1, "A matrícula existente não foi preservada.");
   assertNumber(schemaCheck.table_count, 3, "Nem todas as tabelas da ficha foram criadas.");
   assertNumber(schemaCheck.index_count, 4, "Nem todos os índices da ficha foram criados.");
+
+  const studentSchemaCheck = queryOne(`
+    SELECT
+      (SELECT COUNT(*) FROM sqlite_schema
+        WHERE type = 'table'
+          AND name IN ('students', 'academic_enrollments')) AS table_count,
+      (SELECT COUNT(*) FROM sqlite_schema
+        WHERE type = 'index'
+          AND name IN (
+            'students_source_enrollment_unique',
+            'students_registration_number_unique',
+            'academic_enrollments_student_course_class_unique',
+            'academic_enrollments_status_idx',
+            'academic_enrollments_course_class_idx'
+          )) AS index_count;
+  `);
+
+  assertNumber(studentSchemaCheck.table_count, 2, "As tabelas acadêmicas não foram criadas.");
+  assertNumber(studentSchemaCheck.index_count, 5, "Os índices acadêmicos não foram criados.");
 
   executeSql(`
     INSERT INTO enrollment_notes (enrollment_id, body, author_email)
@@ -112,6 +137,77 @@ try {
   assertNumber(relationshipCheck.note_count, 1, "A observação vinculada não foi criada.");
   assertNumber(relationshipCheck.history_count, 1, "O histórico vinculado não foi criado.");
   assertNumber(relationshipCheck.document_count, 1, "O documento vinculado não foi criado.");
+
+  executeSql(`
+    INSERT INTO students (
+      id, source_enrollment_id, registration_number, created_by
+    )
+      SELECT
+        'student-test-0001',
+        id,
+        'CENTEP-ALUNO-0001',
+        'ci@centep.local'
+      FROM enrollments
+      WHERE protocol = 'CENTEP-TEST-0001';
+
+    INSERT OR IGNORE INTO students (
+      id, source_enrollment_id, registration_number, created_by
+    )
+      SELECT
+        'student-test-duplicate',
+        id,
+        'CENTEP-ALUNO-0002',
+        'ci@centep.local'
+      FROM enrollments
+      WHERE protocol = 'CENTEP-TEST-0001';
+
+    INSERT INTO academic_enrollments (
+      id, student_id, course, class_name, shift, status, created_by
+    ) VALUES (
+      'academic-test-0001',
+      'student-test-0001',
+      'Mixagem na Prática',
+      'Turma Teste',
+      'Noturno',
+      'Ativa',
+      'ci@centep.local'
+    );
+
+    INSERT OR IGNORE INTO academic_enrollments (
+      id, student_id, course, class_name, shift, status, created_by
+    ) VALUES (
+      'academic-test-duplicate',
+      'student-test-0001',
+      'Mixagem na Prática',
+      'Turma Teste',
+      'Noturno',
+      'Ativa',
+      'ci@centep.local'
+    );
+  `);
+
+  const studentCheck = queryOne(`
+    SELECT
+      (SELECT COUNT(*) FROM students) AS student_count,
+      (SELECT COUNT(*) FROM academic_enrollments) AS academic_count;
+  `);
+
+  assertNumber(studentCheck.student_count, 1, "A conversão duplicada do candidato não foi bloqueada.");
+  assertNumber(studentCheck.academic_count, 1, "A matrícula acadêmica duplicada não foi bloqueada.");
+
+  executeSql(`
+    DELETE FROM students WHERE id = 'student-test-0001';
+  `);
+
+  const studentCascadeCheck = queryOne(`
+    SELECT COUNT(*) AS academic_count FROM academic_enrollments;
+  `);
+
+  assertNumber(
+    studentCascadeCheck.academic_count,
+    0,
+    "A exclusão em cascata da matrícula acadêmica falhou.",
+  );
 
   executeSql(`
     DELETE FROM enrollments WHERE protocol = 'CENTEP-TEST-0001';
@@ -150,40 +246,66 @@ function applyMigrations() {
 }
 
 function executeSql(sql) {
-  runWrangler([
-    "d1",
-    "execute",
-    binding,
-    "--local",
-    "--persist-to",
-    persistenceDir,
-    "--config",
-    testConfigPath,
-    "--command",
-    sql,
-    "--yes",
-  ]);
+  withSqlFile(sql, (sqlPath) => {
+    runWrangler([
+      "d1",
+      "execute",
+      binding,
+      "--local",
+      "--persist-to",
+      persistenceDir,
+      "--config",
+      testConfigPath,
+      "--file",
+      sqlPath,
+      "--yes",
+    ]);
+  });
 }
 
 function queryOne(sql) {
-  const stdout = runWrangler([
-    "d1",
-    "execute",
-    binding,
-    "--local",
-    "--persist-to",
-    persistenceDir,
-    "--config",
-    testConfigPath,
-    "--command",
-    sql,
-    "--json",
-  ], true);
-  const response = JSON.parse(stdout);
-  const results = Array.isArray(response) ? response : [response];
-  const row = results.flatMap((item) => item?.results ?? [])[0];
-  if (!row) throw new Error("A consulta de validação do D1 não retornou resultado.");
-  return row;
+  return withSqlFile(sql, (sqlPath) => {
+    const stdout = runWrangler([
+      "d1",
+      "execute",
+      binding,
+      "--local",
+      "--persist-to",
+      persistenceDir,
+      "--config",
+      testConfigPath,
+      "--file",
+      sqlPath,
+      "--json",
+    ], true);
+
+    const response = JSON.parse(stdout);
+    const results = Array.isArray(response) ? response : [response];
+    const row = results.flatMap((item) => item?.results ?? [])[0];
+
+    if (!row) {
+      throw new Error("A consulta de validação do D1 não retornou resultado.");
+    }
+
+    return row;
+  });
+}
+
+function withSqlFile(sql, operation) {
+  const sqlPath = resolve(
+    "dist/server",
+    `.d1-migration-test-${process.pid}-${Date.now()}-${Math.random()
+      .toString(16)
+      .slice(2)}.sql`,
+  );
+
+  writeFileSync(sqlPath, `${sql.trim()}\n`, "utf8");
+
+  try {
+    return operation(sqlPath);
+  } finally {
+    rmSync(sqlPath, { force: true });
+  }
 }
 
 function assertNumber(actual, expected, message) {
@@ -193,8 +315,13 @@ function assertNumber(actual, expected, message) {
 }
 
 function runWrangler(args, captureOutput = false) {
-  const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const result = spawnSync(command, ["exec", "wrangler", ...args], {
+  const isWindows = process.platform === "win32";
+  const command = isWindows ? (process.env.ComSpec || "cmd.exe") : "pnpm";
+  const commandArgs = isWindows
+    ? ["/d", "/s", "/c", "pnpm.cmd", "exec", "wrangler", ...args]
+    : ["exec", "wrangler", ...args];
+
+  const result = spawnSync(command, commandArgs, {
     encoding: "utf8",
     env: process.env,
     stdio: captureOutput ? ["ignore", "pipe", "inherit"] : "inherit",

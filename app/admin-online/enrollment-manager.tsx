@@ -48,10 +48,26 @@ type EnrollmentHistoryItem = {
   createdAt: string;
 };
 
+type AcademicEnrollmentSummary = {
+  id: string;
+  course: string | null;
+  className: string | null;
+  shift: string | null;
+  status: string | null;
+  enrolledAt: string | null;
+};
+
+type StudentSummary = {
+  id: string;
+  registrationNumber: string;
+  academicEnrollment: AcademicEnrollmentSummary | null;
+};
+
 type EnrollmentDetail = {
   enrollment: EnrollmentRecord;
   notes: EnrollmentNote[];
   documents: EnrollmentDocument[];
+  student: StudentSummary | null;
   history: EnrollmentHistoryItem[];
 };
 
@@ -126,6 +142,8 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [updatingDocument, setUpdatingDocument] = useState<string | null>(null);
+  const [classNameDraft, setClassNameDraft] = useState("");
+  const [creatingStudent, setCreatingStudent] = useState(false);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -165,8 +183,10 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
   const enrolledCount = rows.filter((row) => row.status === "Matriculado").length;
 
   async function loadDetail(id: number, silent = false) {
-    if (!silent) setDetailLoading(true);
-    setDetailFeedback("");
+    if (!silent) {
+      setDetailLoading(true);
+      setDetailFeedback("");
+    }
     try {
       const response = await fetch(`/api/admin/enrollments/${id}`, { cache: "no-store" });
       const result = (await response.json()) as EnrollmentDetail & { error?: string };
@@ -183,6 +203,7 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
     setSelectedId(id);
     setDetail(null);
     setNoteDraft("");
+    setClassNameDraft("");
     void loadDetail(id);
   }
 
@@ -191,6 +212,7 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
     setDetail(null);
     setDetailFeedback("");
     setNoteDraft("");
+    setClassNameDraft("");
   }
 
   async function updateStatus(id: number, status: string) {
@@ -280,6 +302,67 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
       );
     } finally {
       setUpdatingDocument(null);
+    }
+  }
+
+  async function createStudent() {
+    if (!selectedId) return;
+
+    const className = classNameDraft.trim().replace(/\s+/g, " ");
+
+    if (className.length < 2 || className.length > 80) {
+      setDetailFeedback("Informe uma turma válida, com 2 a 80 caracteres.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Criar a ficha de aluno e a matrícula acadêmica na turma "${className}"?`,
+      )
+    ) {
+      return;
+    }
+
+    setCreatingStudent(true);
+    setDetailFeedback("");
+
+    try {
+      const response = await fetch(
+        `/api/admin/enrollments/${selectedId}/student`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ className }),
+        },
+      );
+
+      const result = (await response.json()) as {
+        error?: string;
+        student?: {
+          registrationNumber: string;
+        };
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error || "Não foi possível criar a ficha de aluno.");
+      }
+
+      setClassNameDraft("");
+      setDetailFeedback(
+        `Ficha de aluno criada. Matrícula: ${
+          result.student?.registrationNumber || "gerada com sucesso"
+        }.`,
+      );
+
+      await loadDetail(selectedId, true);
+    } catch (error) {
+      setDetailFeedback(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível criar a ficha de aluno.",
+      );
+    } finally {
+      setCreatingStudent(false);
     }
   }
 
@@ -445,12 +528,131 @@ export function EnrollmentManager({ initialRows }: { initialRows: EnrollmentRow[
 
                   <aside>
                     <section className="candidate-action-card">
-                      <span>Próxima etapa</span>
-                      <h3>{detail.enrollment.status === "Matriculado" ? "Status administrativo confirmado" : "Concluir atendimento"}</h3>
-                      <p>{detail.enrollment.status === "Matriculado" ? "O candidato foi marcado como matriculado. A criação da ficha completa de aluno ocorrerá em etapa própria." : "Atualize o andamento ou marque o candidato como matriculado."}</p>
-                      <label><span>Status atual</span><select value={detail.enrollment.status} disabled={updatingId === selectedId} onChange={(event) => void updateStatus(selectedId, event.target.value)}>{statuses.map((status) => <option key={status}>{status}</option>)}</select></label>
-                      {detail.enrollment.status !== "Matriculado" && <button type="button" className="candidate-convert" disabled={updatingId === selectedId} onClick={() => void updateStatus(selectedId, "Matriculado")}>Marcar como matriculado</button>}
-                      <a className="candidate-whatsapp" href={whatsappUrl(detail.enrollment)} target="_blank" rel="noreferrer">Conversar pelo WhatsApp</a>
+                      <span>{detail.student ? "Aluno cadastrado" : "Próxima etapa"}</span>
+
+                      {detail.student ? (
+                        <>
+                          <h3>Ficha acadêmica criada</h3>
+                          <p>
+                            Este candidato já foi convertido em aluno e não poderá
+                            ser convertido novamente.
+                          </p>
+
+                          <dl className="candidate-student-summary">
+                            <div>
+                              <dt>Número de matrícula</dt>
+                              <dd>{detail.student.registrationNumber}</dd>
+                            </div>
+                            <div>
+                              <dt>Curso</dt>
+                              <dd>
+                                {detail.student.academicEnrollment?.course ||
+                                  detail.enrollment.course}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Turma</dt>
+                              <dd>
+                                {detail.student.academicEnrollment?.className || "—"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Situação</dt>
+                              <dd>
+                                {detail.student.academicEnrollment?.status || "Ativa"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Data da matrícula</dt>
+                              <dd>
+                                {formatDateTime(
+                                  detail.student.academicEnrollment?.enrolledAt || "",
+                                )}
+                              </dd>
+                            </div>
+                          </dl>
+                        </>
+                      ) : (
+                        <>
+                          <h3>
+                            {detail.enrollment.status === "Matriculado"
+                              ? "Criar ficha de aluno"
+                              : "Concluir atendimento"}
+                          </h3>
+
+                          <p>
+                            {detail.enrollment.status === "Matriculado"
+                              ? "Informe a turma para gerar o número de matrícula e criar o vínculo acadêmico."
+                              : "Atualize o andamento ou marque o candidato como matriculado."}
+                          </p>
+
+                          <label>
+                            <span>Status atual</span>
+                            <select
+                              value={detail.enrollment.status}
+                              disabled={updatingId === selectedId || creatingStudent}
+                              onChange={(event) =>
+                                void updateStatus(selectedId, event.target.value)
+                              }
+                            >
+                              {statuses.map((status) => (
+                                <option key={status}>{status}</option>
+                              ))}
+                            </select>
+                          </label>
+
+                          {detail.enrollment.status === "Matriculado" ? (
+                            <>
+                              <label className="candidate-class-field">
+                                <span>Turma</span>
+                                <input
+                                  value={classNameDraft}
+                                  onChange={(event) =>
+                                    setClassNameDraft(event.target.value)
+                                  }
+                                  maxLength={80}
+                                  disabled={creatingStudent}
+                                  placeholder="Ex.: Turma Som 2026.2"
+                                />
+                              </label>
+
+                              <button
+                                type="button"
+                                className="candidate-convert"
+                                disabled={
+                                  creatingStudent ||
+                                  classNameDraft.trim().length < 2
+                                }
+                                onClick={() => void createStudent()}
+                              >
+                                {creatingStudent
+                                  ? "Criando ficha…"
+                                  : "Criar ficha de aluno"}
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className="candidate-convert"
+                              disabled={updatingId === selectedId}
+                              onClick={() =>
+                                void updateStatus(selectedId, "Matriculado")
+                              }
+                            >
+                              Marcar como matriculado
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      <a
+                        className="candidate-whatsapp"
+                        href={whatsappUrl(detail.enrollment)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Conversar pelo WhatsApp
+                      </a>
                     </section>
 
                     <section className="candidate-side-card">
