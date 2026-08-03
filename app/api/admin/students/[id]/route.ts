@@ -3,46 +3,25 @@ import {
   adminJson,
   authorizeAdminRequest,
 } from "../../admin-request";
+import {
+  buildAcademicUpdate,
+  isAcademicUpdatePayload,
+  isUuid,
+  normalizeAcademicUpdatePayload,
+  validateAcademicUpdate,
+} from "./validation";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 type AcademicEnrollmentRecord = {
-  student_id: string;
   source_enrollment_id: number;
-  academic_enrollment_id: string;
   course: string;
   class_name: string;
   shift: string;
   status: string;
 };
-
-const academicStatuses = new Set([
-  "Ativa",
-  "Trancada",
-  "Concluída",
-  "Cancelada",
-]);
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value,
-  );
-}
-
-function normalizeText(value: unknown) {
-  if (typeof value !== "string") return "";
-  return value.trim().replace(/\s+/g, " ");
-}
-
-function isValidText(value: string, minimum: number, maximum: number) {
-  return (
-    value.length >= minimum &&
-    value.length <= maximum &&
-    !/[\u0000-\u001F\u007F]/.test(value)
-  );
-}
 
 export async function PATCH(request: Request, context: RouteContext) {
   const authorization = await authorizeAdminRequest(request);
@@ -51,54 +30,29 @@ export async function PATCH(request: Request, context: RouteContext) {
   const { id: studentId } = await context.params;
 
   if (!isUuid(studentId)) {
-    return adminJson({ error: "Identificador do aluno inválido." }, { status: 400 });
+    return adminJson(
+      { error: "Identificador do aluno inválido." },
+      { status: 400 },
+    );
   }
 
-  let payload: {
-    academicEnrollmentId?: unknown;
-    className?: unknown;
-    shift?: unknown;
-    status?: unknown;
-  };
+  let rawPayload: unknown;
 
   try {
-    payload = (await request.json()) as typeof payload;
+    rawPayload = await request.json();
   } catch {
     return adminJson({ error: "Dados inválidos." }, { status: 400 });
   }
 
-  const academicEnrollmentId = normalizeText(payload.academicEnrollmentId);
-  const className = normalizeText(payload.className);
-  const shift = normalizeText(payload.shift);
-  const status = normalizeText(payload.status);
-
-  if (!isUuid(academicEnrollmentId)) {
-    return adminJson(
-      { error: "Vínculo acadêmico inválido." },
-      { status: 400 },
-    );
+  if (!isAcademicUpdatePayload(rawPayload)) {
+    return adminJson({ error: "Dados inválidos." }, { status: 400 });
   }
 
+  const requested = normalizeAcademicUpdatePayload(rawPayload);
+  const validationError = validateAcademicUpdate(requested);
 
-  if (!isValidText(className, 2, 80)) {
-    return adminJson(
-      { error: "Informe uma turma válida, com 2 a 80 caracteres." },
-      { status: 400 },
-    );
-  }
-
-  if (!isValidText(shift, 2, 40)) {
-    return adminJson(
-      { error: "Informe um turno válido, com 2 a 40 caracteres." },
-      { status: 400 },
-    );
-  }
-
-  if (!academicStatuses.has(status)) {
-    return adminJson(
-      { error: "Situação acadêmica inválida." },
-      { status: 400 },
-    );
+  if (validationError) {
+    return adminJson({ error: validationError }, { status: 400 });
   }
 
   const database = getD1Database();
@@ -106,9 +60,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const current = await database
     .prepare(
       `SELECT
-        students.id AS student_id,
         students.source_enrollment_id,
-        academic_enrollments.id AS academic_enrollment_id,
         academic_enrollments.course,
         academic_enrollments.class_name,
         academic_enrollments.shift,
@@ -120,7 +72,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         AND academic_enrollments.id = ?
       LIMIT 1`,
     )
-    .bind(studentId, academicEnrollmentId)
+    .bind(studentId, requested.academicEnrollmentId)
     .first<AcademicEnrollmentRecord>();
 
   if (!current) {
@@ -130,36 +82,23 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const changes: string[] = [];
+  const update = buildAcademicUpdate(
+    {
+      course: current.course,
+      className: current.class_name,
+      shift: current.shift,
+      status: current.status,
+    },
+    requested,
+  );
 
-
-  if (current.class_name !== className) {
-    changes.push(`turma de "${current.class_name}" para "${className}"`);
-  }
-
-  if (current.shift !== shift) {
-    changes.push(`turno de "${current.shift}" para "${shift}"`);
-  }
-
-  if (current.status !== status) {
-    changes.push(`situação de "${current.status}" para "${status}"`);
-  }
-
-  if (changes.length === 0) {
+  if (update.unchanged) {
     return adminJson({
       ok: true,
       unchanged: true,
-      academicEnrollment: {
-        id: academicEnrollmentId,
-        course: current.course,
-        className,
-        shift,
-        status,
-      },
+      academicEnrollment: update.academicEnrollment,
     });
   }
-
-  const description = `Dados acadêmicos atualizados: ${changes.join("; ")}.`;
 
   try {
     await database.batch([
@@ -175,10 +114,10 @@ export async function PATCH(request: Request, context: RouteContext) {
              AND student_id = ?`,
         )
         .bind(
-          className,
-          shift,
-          status,
-          academicEnrollmentId,
+          update.academicEnrollment.className,
+          update.academicEnrollment.shift,
+          update.academicEnrollment.status,
+          update.academicEnrollment.id,
           studentId,
         ),
 
@@ -193,7 +132,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         )
         .bind(
           current.source_enrollment_id,
-          description,
+          update.description,
           authorization.user.email,
         ),
     ]);
@@ -222,12 +161,6 @@ export async function PATCH(request: Request, context: RouteContext) {
   return adminJson({
     ok: true,
     unchanged: false,
-    academicEnrollment: {
-      id: academicEnrollmentId,
-      course: current.course,
-      className,
-      shift,
-      status,
-    },
+    academicEnrollment: update.academicEnrollment,
   });
 }
