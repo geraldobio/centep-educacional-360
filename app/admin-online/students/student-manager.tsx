@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 export type StudentRow = {
@@ -195,6 +196,7 @@ export function StudentManager({
                 <th>Turno</th>
                 <th>Situação</th>
                 <th>Data da matrícula</th>
+                <th>Ações</th>
               </tr>
             </thead>
 
@@ -218,12 +220,20 @@ export function StudentManager({
                     </span>
                   </td>
                   <td>{formatDateTime(row.enrolledAt)}</td>
+                  <td>
+                    <Link
+                      className="student-row-action"
+                      href={`/admin-online/students/${row.studentId}`}
+                    >
+                      Abrir ficha
+                    </Link>
+                  </td>
                 </tr>
               ))}
 
               {filteredRows.length === 0 && (
                 <tr>
-                  <td className="students-empty" colSpan={7}>
+                  <td className="students-empty" colSpan={8}>
                     {initialRows.length === 0
                       ? "Nenhum aluno cadastrado até o momento."
                       : "Nenhum aluno corresponde aos filtros informados."}
