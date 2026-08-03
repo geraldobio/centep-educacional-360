@@ -39,3 +39,7 @@ yarn-error.log*
 
 # typescript
 next-env.d.ts
+
+# generated build and Wrangler state
+/dist/
+/.wrangler/
