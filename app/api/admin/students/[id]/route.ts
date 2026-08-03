@@ -224,7 +224,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     unchanged: false,
     academicEnrollment: {
       id: academicEnrollmentId,
-      course,
+      course: current.course,
       className,
       shift,
       status,
