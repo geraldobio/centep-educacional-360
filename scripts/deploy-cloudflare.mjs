@@ -44,11 +44,20 @@ assertExact("Conta Cloudflare", accountId, EXPECTED_ACCOUNT_ID);
 assertExact("Domínio do Cloudflare Access", accessTeamDomain, EXPECTED_ACCESS_TEAM_DOMAIN);
 assertExact("Audience do Cloudflare Access", accessAudience, EXPECTED_ACCESS_AUDIENCE);
 
-if (!existsSync(configPath)) {
-  throw new Error("Build da aplicação não encontrado. Execute pnpm run build primeiro.");
-}
 if (!existsSync(migrationsSource)) {
   throw new Error("Migrações do banco D1 não foram encontradas.");
+}
+
+rmSync("dist", { recursive: true, force: true });
+
+runPnpm(["run", "build"], {
+  CLOUDFLARE_DIRECT_DEPLOY: "1",
+  CLOUDFLARE_D1_DATABASE_ID: EXPECTED_DATABASE_ID,
+  CLOUDFLARE_D1_DATABASE_NAME: EXPECTED_DATABASE_NAME,
+});
+
+if (!existsSync(configPath)) {
+  throw new Error("O build da aplicação não gerou dist/server/wrangler.json.");
 }
 
 const config = JSON.parse(readFileSync(configPath, "utf8"));
@@ -181,16 +190,24 @@ function validateJsonOutput(value, label) {
   }
 }
 
-function runWrangler(args, captureOutput = false) {
-  const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const result = spawnSync(command, ["exec", "wrangler", ...args], {
+function runPnpm(args, extraEnv = {}, captureOutput = false) {
+  const isWindows = process.platform === "win32";
+  const command = isWindows ? process.env.ComSpec || "cmd.exe" : "pnpm";
+  const commandArgs = isWindows
+    ? ["/d", "/s", "/c", "pnpm.cmd", ...args]
+    : args;
+
+  const result = spawnSync(command, commandArgs, {
     encoding: "utf8",
-    env: process.env,
-    shell: process.platform === "win32",
+    env: { ...process.env, ...extraEnv },
     stdio: captureOutput ? ["ignore", "pipe", "inherit"] : "inherit",
   });
 
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
   return result.stdout ?? "";
+}
+
+function runWrangler(args, captureOutput = false) {
+  return runPnpm(["exec", "wrangler", ...args], {}, captureOutput);
 }
