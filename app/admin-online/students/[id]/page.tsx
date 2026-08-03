@@ -13,6 +13,7 @@ import {
   students,
 } from "../../../../db/schema";
 import { AdminShell } from "../../admin-shell";
+import { AcademicEnrollmentEditor } from "./academic-enrollment-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -264,46 +265,59 @@ export default async function StudentDetailPage({
 
           <div className="student-academic-list">
             {academicRows.map((row) => (
-              <section
-                className="student-academic-item"
+              <article
+                className="student-academic-record"
                 key={row.academicEnrollmentId}
               >
-                <div>
-                  <small>Curso</small>
-                  <strong>{row.course}</strong>
-                </div>
+                <section className="student-academic-item">
+                  <div>
+                    <small>Curso</small>
+                    <strong>{row.course}</strong>
+                  </div>
 
-                <div>
-                  <small>Turma</small>
-                  <strong>{row.className}</strong>
-                </div>
+                  <div>
+                    <small>Turma</small>
+                    <strong>{row.className}</strong>
+                  </div>
 
-                <div>
-                  <small>Turno</small>
-                  <strong>{row.shift}</strong>
-                </div>
+                  <div>
+                    <small>Turno</small>
+                    <strong>{row.shift}</strong>
+                  </div>
 
-                <div>
-                  <small>Situação</small>
-                  <span
-                    className={`student-status ${statusClassName(
-                      row.academicStatus || "",
-                    )}`}
-                  >
-                    {row.academicStatus}
-                  </span>
-                </div>
+                  <div>
+                    <small>Situação</small>
+                    <span
+                      className={`student-status ${statusClassName(
+                        row.academicStatus || "",
+                      )}`}
+                    >
+                      {row.academicStatus}
+                    </span>
+                  </div>
 
-                <div>
-                  <small>Matrícula</small>
-                  <strong>{formatDateTime(row.enrolledAt)}</strong>
-                </div>
+                  <div>
+                    <small>Matrícula</small>
+                    <strong>{formatDateTime(row.enrolledAt)}</strong>
+                  </div>
 
-                <div>
-                  <small>Última atualização</small>
-                  <strong>{formatDateTime(row.academicUpdatedAt)}</strong>
-                </div>
-              </section>
+                  <div>
+                    <small>Última atualização</small>
+                    <strong>{formatDateTime(row.academicUpdatedAt)}</strong>
+                  </div>
+                </section>
+
+                <AcademicEnrollmentEditor
+                  studentId={student.studentId}
+                  academicEnrollment={{
+                    id: row.academicEnrollmentId!,
+                    course: row.course!,
+                    className: row.className!,
+                    shift: row.shift!,
+                    status: row.academicStatus!,
+                  }}
+                />
+              </article>
             ))}
 
             {academicRows.length === 0 && (
