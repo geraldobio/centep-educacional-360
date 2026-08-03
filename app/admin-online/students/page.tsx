@@ -1,16 +1,14 @@
-import { desc, eq } from "drizzle-orm";
 import {
   chatGPTSignOutPath,
   isCentepAdminEmail,
   requireChatGPTUser,
 } from "../../chatgpt-auth";
-import { getDb } from "../../../db";
-import {
-  academicEnrollments,
-  enrollments,
-  students,
-} from "../../../db/schema";
+import { getD1Database } from "../../../db";
 import { AdminShell } from "../admin-shell";
+import {
+  studentListSql,
+  type StudentListRecord,
+} from "./student-list-query";
 import {
   StudentManager,
   type StudentRow,
@@ -34,45 +32,22 @@ export default async function StudentsPage() {
     );
   }
 
-  const db = getDb();
+  const result = await getD1Database()
+    .prepare(studentListSql)
+    .all<StudentListRecord>();
 
-  const rows = await db
-    .select({
-      studentId: students.id,
-      sourceEnrollmentId: students.sourceEnrollmentId,
-      registrationNumber: students.registrationNumber,
-      name: enrollments.name,
-      course: academicEnrollments.course,
-      className: academicEnrollments.className,
-      shift: academicEnrollments.shift,
-      status: academicEnrollments.status,
-      enrolledAt: academicEnrollments.enrolledAt,
-    })
-    .from(students)
-    .innerJoin(
-      enrollments,
-      eq(students.sourceEnrollmentId, enrollments.id),
-    )
-    .innerJoin(
-      academicEnrollments,
-      eq(academicEnrollments.studentId, students.id),
-    )
-    .orderBy(
-      desc(academicEnrollments.enrolledAt),
-      desc(students.createdAt),
-    )
-    .limit(500);
+  const records = (result.results ?? []) as StudentListRecord[];
 
-  const safeRows: StudentRow[] = rows.map((row) => ({
-    studentId: row.studentId,
-    sourceEnrollmentId: row.sourceEnrollmentId,
-    registrationNumber: row.registrationNumber,
+  const safeRows: StudentRow[] = records.map((row) => ({
+    studentId: row.student_id,
+    sourceEnrollmentId: row.source_enrollment_id,
+    registrationNumber: row.registration_number,
     name: row.name,
     course: row.course,
-    className: row.className,
+    className: row.class_name,
     shift: row.shift,
     status: row.status,
-    enrolledAt: row.enrolledAt,
+    enrolledAt: row.enrolled_at,
   }));
 
   return (

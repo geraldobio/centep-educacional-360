@@ -51,6 +51,12 @@ jobs:
       - name: Enrollment validation tests
         run: pnpm run test:enrollment-validation
 
+      - name: Student academic update tests
+        run: pnpm run test:student-academic-update
+
+      - name: Student list query tests
+        run: pnpm run test:student-list-query
+
       - name: Production build
         run: pnpm run build
 
