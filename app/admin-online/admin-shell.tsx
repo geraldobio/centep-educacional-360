@@ -27,21 +27,22 @@ export function AdminShell({
         <div className="online-admin-nav-label">GESTÃO ONLINE</div>
 
         <nav>
-          <Link
-            className={active === "enrollments" ? "active" : undefined}
-            href="/admin-online"
-          >
-            <span>MT</span>
-            Matrículas
-          </Link>
+  <a
+    className={active === "enrollments" ? "active" : undefined}
+    href="/admin-online"
+  >
+    <span>MT</span>
+    Matrículas
+  </a>
 
-          <Link
-            className={active === "students" ? "active" : undefined}
-            href="/admin-online/students"
-          >
-            <span>AL</span>
-            Alunos
-          </Link>
+  {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Cloudflare Access exige navegação completa nesta rota protegida. */}
+  <a
+    className={active === "students" ? "active" : undefined}
+    href="/admin-online/students"
+  >
+    <span>AL</span>
+    Alunos
+  </a>
 
           <Link href="/admin">
             <span>DB</span>

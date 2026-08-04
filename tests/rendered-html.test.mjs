@@ -64,3 +64,27 @@ test("keeps demo role routing explicit and documented", async () => {
   assert.match(readme, /pnpm dev/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 });
+test("uses full-page navigation for protected admin routes", async () => {
+  const adminShell = await readFile(
+    new URL("../app/admin-online/admin-shell.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    adminShell,
+    /<a[\s\S]*?href="\/admin-online"[\s\S]*?>[\s\S]*?Matrículas[\s\S]*?<\/a>/,
+  );
+
+  assert.match(
+    adminShell,
+    /<a[\s\S]*?href="\/admin-online\/students"[\s\S]*?>[\s\S]*?Alunos[\s\S]*?<\/a>/,
+  );
+
+  assert.doesNotMatch(
+    adminShell,
+    /<Link[\s\S]*?href="\/admin-online(?:\/students)?"[\s\S]*?>/,
+  );
+
+  assert.match(adminShell, /<Link href="\/admin">/);
+  assert.match(adminShell, /<Link href="\/">/);
+});
